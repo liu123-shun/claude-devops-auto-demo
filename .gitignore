@@ -1,0 +1,19 @@
+# 依赖目录
+node_modules/
+# 日志文件
+logs/
+*.log
+# 环境密钥（严禁上传）
+.env
+.env.local
+# 系统缓存文件
+.DS_Store
+Thumbs.db
+# IDE配置
+.vscode/
+# 构建产物
+dist/
+build/
+coverage/
+# Docker临时数据
+docker-data/
