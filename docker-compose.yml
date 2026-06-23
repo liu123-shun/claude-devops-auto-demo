@@ -1,0 +1,10 @@
+services:
+  user-api:
+    build:
+      context: .
+      args:
+        PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
+    ports:
+      - "5000:5000"
+    restart: always
+    

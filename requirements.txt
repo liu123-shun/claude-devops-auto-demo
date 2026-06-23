@@ -1,0 +1,7 @@
+# 用户管理后端 — Python 依赖
+# 安装方式: pip install -r requirements.txt
+
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pytest>=8.0.0
+httpx>=0.27.0
