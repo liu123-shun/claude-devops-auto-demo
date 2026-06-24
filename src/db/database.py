@@ -38,54 +38,52 @@ def init_triggers() -> None:
     """程序启动时自动创建 MySQL 触发器。
 
     触发器清单：
-    1. after_user_login       — 登录后自动写入 login_log
-    2. after_borrow_insert    — 借阅时日志 + 库存 -1
-    3. after_borrow_update_return — 归还时日志 + 库存 +1
+    1. after_borrow_insert    — 借阅时日志 + 库存 -1
+    2. after_borrow_update_return — 归还时日志 + 库存 +1
+
+    注意：每句 SQL 独立提交，避免 ; 分割破坏 BEGIN...END 块。
     """
-    triggers_sql = """
-    -- 删除已存在的触发器（幂等创建）
-    DROP TRIGGER IF EXISTS after_user_login;
-    DROP TRIGGER IF EXISTS after_borrow_insert;
-    DROP TRIGGER IF EXISTS after_borrow_update_return;
 
-    -- 触发器1：用户登录日志（在 sys_user 表更新后模拟，通过应用层调用）
-    -- 说明：MySQL 触发器无法直接捕获"登录"行为（非 DML），
-    -- 实际登录日志由应用层 auth_service 手动写入 login_log 表。
-    -- 此处保留占位以防后续通过其他事件触发。
+    drop_statements = [
+        "DROP TRIGGER IF EXISTS after_borrow_insert",
+        "DROP TRIGGER IF EXISTS after_borrow_update_return",
+    ]
 
-    -- 触发器2：借阅时自动写入操作日志 + 库存 -1
+    trigger_borrow_insert = """
     CREATE TRIGGER after_borrow_insert
         AFTER INSERT ON borrow_record
         FOR EACH ROW
     BEGIN
-        -- 写入借阅操作日志
-        INSERT INTO borrow_operation_log (borrow_record_id, operate_type, operate_time, operate_user_id)
+        INSERT INTO borrow_operation_log
+            (borrow_record_id, operate_type, operate_time, operate_user_id)
         VALUES (NEW.id, 'borrow', NOW(), NEW.reader_id);
-        -- 图书库存 -1
         UPDATE book SET stock = stock - 1 WHERE id = NEW.book_id;
-    END;
+    END
+    """
 
-    -- 触发器3：归还时自动写入归还日志 + 库存 +1
+    trigger_borrow_return = """
     CREATE TRIGGER after_borrow_update_return
         AFTER UPDATE ON borrow_record
         FOR EACH ROW
     BEGIN
         IF NEW.return_time IS NOT NULL AND OLD.return_time IS NULL THEN
-            INSERT INTO borrow_operation_log (borrow_record_id, operate_type, operate_time, operate_user_id)
+            INSERT INTO borrow_operation_log
+                (borrow_record_id, operate_type, operate_time, operate_user_id)
             VALUES (NEW.id, 'return', NOW(), NEW.reader_id);
             UPDATE book SET stock = stock + 1 WHERE id = NEW.book_id;
         END IF;
-    END;
+    END
     """
+
+    create_statements = [trigger_borrow_insert, trigger_borrow_return]
+
     with engine.connect() as conn:
-        for statement in triggers_sql.split(";"):
-            stmt = statement.strip()
-            if stmt:
-                try:
-                    conn.execute(text(stmt))
-                except OperationalError as exc:
-                    # 触发器已存在等非致命错误可忽略
-                    if "already exists" not in str(exc).lower():
-                        print(f"[WARN] 触发器创建警告: {exc}")
+        for stmt in drop_statements + create_statements:
+            try:
+                conn.execute(text(stmt))
+            except OperationalError as exc:
+                msg = str(exc)
+                if "already exists" not in msg.lower():
+                    print(f"[WARN] 触发器执行警告: {exc}")
         conn.commit()
     print("[OK] 数据库触发器初始化完成")

@@ -11,23 +11,21 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import bcrypt
 
 from ..config.settings import SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
 from ..db.models import SysUser
 from ..dao import auth_dao, login_log_dao
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
     """将明文密码加密为 bcrypt 哈希"""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证明文密码与哈希是否匹配"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
 def create_jwt_token(user_id: int, username: str, role: str) -> str:
