@@ -29,12 +29,12 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root123456
+          MYSQL_ROOT_PASSWORD: 123456
           MYSQL_DATABASE: library_manage
         ports:
           - 3306:3306
         options: >-
-          --health-cmd "mysqladmin ping -h localhost -u root -proot123456"
+          --health-cmd "mysqladmin ping -h localhost -u root -p123456"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -62,7 +62,7 @@ jobs:
       - name: Wait for MySQL
         run: |
           for i in {1..30}; do
-            if mysqladmin ping -h 127.0.0.1 -u root -proot123456 --silent; then
+            if mysqladmin ping -h 127.0.0.1 -u root -p123456 --silent; then
               echo "MySQL is ready"
               break
             fi
@@ -79,7 +79,7 @@ jobs:
       # 1.6 Pytest 单元测试
       - name: Run Pytest
         env:
-          DATABASE_URL: mysql+pymysql://root:root123456@127.0.0.1:3306/library_manage?charset=utf8mb4
+          DATABASE_URL: mysql+pymysql://root:123456@127.0.0.1:3306/library_manage?charset=utf8mb4
         run: |
           echo "=== Pytest 单元测试 ==="
           pytest tests/ -v --tb=short

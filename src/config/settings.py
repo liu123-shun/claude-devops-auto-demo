@@ -13,7 +13,7 @@ load_dotenv()
 # ---- 数据库 -----------------------------------------------------------
 DATABASE_URL: str = os.getenv(
     "DATABASE_URL",
-    "mysql+pymysql://root:root123456@127.0.0.1:3306/library_manage?charset=utf8mb4",
+    "mysql+pymysql://root:123456@host.docker.internal:3306/library_manage?charset=utf8mb4",
 )
 
 # ---- JWT --------------------------------------------------------------
