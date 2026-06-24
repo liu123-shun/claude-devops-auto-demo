@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 
 class BorrowCreate(BaseModel):
-    """借书请求"""
+    """借书请求 — reader_id 为 0 时由后端根据 Token 自动确定"""
     book_id: int = Field(..., gt=0, description="图书ID")
-    reader_id: int = Field(..., gt=0, description="读者ID")
+    reader_id: int = Field(0, ge=0, description="读者ID（0=自动从Token解析）")
 
 
 class BorrowReturn(BaseModel):

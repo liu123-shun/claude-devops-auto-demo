@@ -119,12 +119,12 @@ function searchBooks(page = 1) {
     } else {
       empty.style.display = "none";
       tbody.innerHTML = data.items.map(b => `
-        <tr>
+        <tr style="${b.stock <= 0 ? 'opacity:0.45;background:#f5f5f5;' : ''}">
           <td>${b.id}</td>
-          <td><strong>${b.book_name}</strong></td>
+          <td><strong>${b.book_name}</strong>${b.stock <= 0 ? ' <span class="tag tag-red">已借完</span>' : ''}</td>
           <td>${b.author}</td>
           <td>${b.category || "-"}</td>
-          <td><span style="color:${b.stock <= 3 ? '#e74c3c' : '#27ae60'};font-weight:700;">${b.stock}</span></td>
+          <td><span style="color:${b.stock <= 0 ? '#aaa' : b.stock <= 3 ? '#e74c3c' : '#27ae60'};font-weight:700;">${b.stock}</span></td>
           <td>${b.create_time ? b.create_time.slice(0,10) : "-"}</td>
           <td>
             <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(b).replace(/'/g,"&#39;")})'>编辑</button>

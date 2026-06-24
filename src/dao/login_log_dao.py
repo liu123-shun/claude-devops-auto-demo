@@ -29,8 +29,21 @@ def create_login_log(
     return log
 
 
-def update_logout_time(db: Session, log: LoginLog) -> LoginLog:
-    """更新退出时间"""
+def get_latest_logout_null(db: Session, user_id: int) -> Optional[LoginLog]:
+    """查询指定用户最新一条 logout_time 仍为空的登录日志"""
+    return (
+        db.query(LoginLog)
+        .filter(LoginLog.user_id == user_id, LoginLog.logout_time.is_(None))
+        .order_by(LoginLog.id.desc())
+        .first()
+    )
+
+
+def update_logout_time(db: Session, user_id: int) -> Optional[LoginLog]:
+    """将指定用户最新未登出记录的 logout_time 更新为当前时间"""
+    log = get_latest_logout_null(db, user_id)
+    if log is None:
+        return None
     log.logout_time = datetime.now()
     db.commit()
     db.refresh(log)

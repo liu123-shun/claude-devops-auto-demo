@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>我的借阅 — 学生端</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .borrow-btn-wrap { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .book-option-unavailable { color:#999; }
+</style>
 </head>
 <body>
 
@@ -28,7 +32,10 @@
   <div class="breadcrumb">🏠 学生首页 / 我的借阅</div>
 
   <div class="card">
-    <div class="card-title">📖 我的借阅记录</div>
+    <div class="borrow-btn-wrap">
+      <div class="card-title" style="margin-bottom:0;">📖 我的借阅记录</div>
+      <button class="btn btn-primary" onclick="openBorrowModal()">＋ 借书</button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -42,12 +49,36 @@
   </div>
 </div>
 
+<!-- 借书弹窗 -->
+<div class="modal-overlay" id="borrow-modal">
+  <div class="modal">
+    <div class="modal-header">📖 申请借书<button class="modal-close" onclick="closeModal('borrow-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>选择图书</label>
+        <select id="borrow-book-select">
+          <option value="">-- 请选择要借的图书 --</option>
+        </select>
+      </div>
+      <div id="borrow-stock-info" style="font-size:12px;color:#6b8299;margin-top:-6px;"></div>
+      <div id="borrow-error" class="login-error"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('borrow-modal')">取消</button>
+      <button class="btn btn-primary" id="borrow-submit-btn" onclick="submitBorrow()">确认借书</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 <script>
 const user = checkAuth();
 if (!user || user.role !== "student") { alert("仅学生可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 
+let availableBooks = [];
+
+// ---- 借阅列表 ----
 function loadBorrows(page = 1) {
   apiGet(`/api/student/borrows?page=${page}&page_size=10`).then(data => {
     if (!data) return;
@@ -76,6 +107,93 @@ function loadBorrows(page = 1) {
     }
     renderPagination("pagination", data.page, data.total_pages, loadBorrows);
   });
+}
+
+// ---- 打开借书弹窗 ----
+async function openBorrowModal() {
+  // 每次打开弹窗重新拉取可借图书
+  const data = await apiGet("/api/student/books");
+  const select = document.getElementById("borrow-book-select");
+  const info = document.getElementById("borrow-stock-info");
+  const err = document.getElementById("borrow-error");
+  err.style.display = "none";
+  info.textContent = "";
+  select.innerHTML = '<option value="">-- 请选择要借的图书 --</option>';
+
+  if (!data || !data.items || data.items.length === 0) {
+    select.innerHTML = '<option value="">暂无可借图书</option>';
+  } else {
+    availableBooks = data.items;
+    const available = availableBooks.filter(b => b.stock > 0);
+    const unavailable = availableBooks.filter(b => b.stock <= 0);
+    if (available.length === 0) {
+      select.innerHTML = '<option value="">所有图书均已借出</option>';
+    } else {
+      available.forEach(b => {
+        select.innerHTML += `<option value="${b.id}">${b.book_name} — ${b.author} (库存:${b.stock})</option>`;
+      });
+    }
+    if (unavailable.length > 0) {
+      // 在列表末尾追加不可借的（禁用）
+      unavailable.forEach(b => {
+        select.innerHTML += `<option value="${b.id}" disabled style="color:#999;">${b.book_name} — ${b.author} (已借完)</option>`;
+      });
+    }
+  }
+
+  // 监听选择变更，显示库存
+  select.onchange = function() {
+    info.textContent = "";
+    const selId = parseInt(select.value);
+    const book = availableBooks.find(b => b.id === selId);
+    if (book) {
+      if (book.stock <= 0) {
+        info.textContent = "⚠️ 该书已无库存，不可借阅";
+        info.style.color = "#e74c3c";
+        document.getElementById("borrow-submit-btn").disabled = true;
+      } else {
+        info.textContent = `📦 当前库存：${book.stock} 册`;
+        info.style.color = "#27ae60";
+        document.getElementById("borrow-submit-btn").disabled = false;
+      }
+    }
+  };
+
+  openModal("borrow-modal");
+}
+
+// ---- 提交借书 ----
+async function submitBorrow() {
+  const select = document.getElementById("borrow-book-select");
+  const err = document.getElementById("borrow-error");
+  err.style.display = "none";
+
+  const bookId = parseInt(select.value);
+  if (!bookId) {
+    err.textContent = "请选择一本图书";
+    err.style.display = "block";
+    return;
+  }
+
+  const book = availableBooks.find(b => b.id === bookId);
+  if (!book || book.stock <= 0) {
+    err.textContent = "该书已无库存，无法借阅";
+    err.style.display = "block";
+    return;
+  }
+
+  const result = await apiPost("/api/student/borrows", { book_id: bookId, reader_id: 0 });
+  if (!result) return;
+
+  // 201 成功
+  if (result.id) {
+    alert(`借书成功！《${result.book_name}》已借出`);
+    closeModal("borrow-modal");
+    loadBorrows(1);  // 刷新列表
+  } else if (result.detail) {
+    err.textContent = result.detail;
+    err.style.display = "block";
+  }
 }
 
 loadBorrows();

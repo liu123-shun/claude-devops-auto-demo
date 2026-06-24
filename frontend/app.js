@@ -77,7 +77,19 @@ async function apiDelete(url) {
 }
 
 // ---- 退出登录 ----
-function logout() {
+async function logout() {
+    // 先调后端接口写入 logout_time
+    const token = getToken();
+    if (token) {
+        try {
+            await fetch("/api/auth/logout", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + token },
+            });
+        } catch (e) {
+            // 即使接口异常也继续清理本地
+        }
+    }
     clearToken();
     window.location.href = "/frontend/login.html";
 }

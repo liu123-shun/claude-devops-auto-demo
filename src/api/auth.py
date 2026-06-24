@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from ..db.database import get_db
 from ..schemas.auth import LoginRequest, LoginResponse
 from ..service import auth_service
+from ..dao import login_log_dao
 from ..common.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["鉴权"])
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/api/auth", tags=["鉴权"])
 def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """
     用户登录（管理员/学生双角色）。
-    校验账号密码，成功返回 JWT Token。
+    校验账号密码，成功返回 JWT Token 并自动写入登录日志。
     """
     client_ip = request.client.host if request.client else None
     result = auth_service.authenticate(
@@ -36,10 +37,20 @@ def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/logout")
-def logout(current_user: dict = Depends(get_current_user)):
+def logout(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
-    退出登录（前端清除 Token，后端记录可扩展）。
+    退出登录：
+    1. 更新 login_log 表中当前用户最新未登出记录的 logout_time
+    2. 前端清除本地 Token
     """
+    user_id = current_user.get("user_id")
+    if user_id:
+        updated = login_log_dao.update_logout_time(db, int(user_id))
+        if updated:
+            return {"message": "退出成功", "logout_time": updated.logout_time.isoformat()}
     return {"message": "退出成功"}
 
 
