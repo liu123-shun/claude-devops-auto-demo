@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的借阅 — 学生端</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 学生端</div>
+  <div class="user-info">
+    <span>👤 <span id="display-name">学生</span></span>
+    <button onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="nav-group"><div class="nav-label">主菜单</div>
+    <a href="student_index.html"><span class="icon">📊</span><span>我的首页</span></a></div>
+  <div class="nav-group"><div class="nav-label">我的记录</div>
+    <a href="student_my_borrow.html" class="active"><span class="icon">📖</span><span>我的借阅</span></a>
+    <a href="student_my_login_log.html"><span class="icon">📝</span><span>我的登录日志</span></a></div>
+</div>
+
+<div class="main-content">
+  <div class="breadcrumb">🏠 学生首页 / 我的借阅</div>
+
+  <div class="card">
+    <div class="card-title">📖 我的借阅记录</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>图书名称</th><th>借阅时间</th><th>归还时间</th><th>状态</th></tr>
+        </thead>
+        <tbody id="borrow-tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none;">暂无借阅记录</div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user = checkAuth();
+if (!user || user.role !== "student") { alert("仅学生可访问"); window.location.href = "login.html"; }
+displayUserInfo();
+
+function loadBorrows(page = 1) {
+  apiGet(`/api/student/borrows?page=${page}&page_size=10`).then(data => {
+    if (!data) return;
+    const tbody = document.getElementById("borrow-tbody");
+    const empty = document.getElementById("empty-state");
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = ""; empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      const now = new Date();
+      tbody.innerHTML = data.items.map(r => {
+        let status = r.status;
+        if (!r.return_time && r.borrow_time) {
+          const days = Math.floor((now - new Date(r.borrow_time)) / (1000 * 60 * 60 * 24));
+          if (days >= 30) status = "overdue";
+        }
+        return `
+        <tr style="${status === 'overdue' ? 'background:#fff5f5;' : ''}">
+          <td>${r.id}</td>
+          <td><strong>${r.book_name || "-"}</strong></td>
+          <td>${r.borrow_time ? r.borrow_time.replace("T"," ").slice(0,19) : "-"}</td>
+          <td>${r.return_time ? r.return_time.replace("T"," ").slice(0,19) : "-"}</td>
+          <td>${statusTag(status)}</td>
+        </tr>`;
+      }).join("");
+    }
+    renderPagination("pagination", data.page, data.total_pages, loadBorrows);
+  });
+}
+
+loadBorrows();
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>逾期图书 — 管理后台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
+  <div class="user-info">
+    <span>👤 <span id="display-name">管理员</span></span>
+    <button onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="nav-group"><div class="nav-label">主菜单</div>
+    <a href="admin_index.html"><span class="icon">📊</span><span>首页看板</span></a></div>
+  <div class="nav-group"><div class="nav-label">业务管理</div>
+    <a href="admin_book.html"><span class="icon">📖</span><span>图书管理</span></a>
+    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a></div>
+  <div class="nav-group"><div class="nav-label">日志审计</div>
+    <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
+    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅操作日志</span></a>
+    <a href="admin_overdue.html" class="active"><span class="icon">⚠️</span><span>逾期图书</span></a></div>
+</div>
+
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 逾期图书</div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="color:#6b8299;">筛选条件：借出超过 <strong>30天</strong> 未归还</span>
+      <button class="btn btn-primary btn-sm" onclick="loadOverdue()">刷新</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>图书名称</th><th>借阅学生</th><th>借阅时间</th><th>逾期天数</th><th>状态</th></tr>
+        </thead>
+        <tbody id="overdue-tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none;">🎉 暂无逾期图书</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user = checkAuth();
+if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
+displayUserInfo();
+
+function loadOverdue() {
+  apiGet("/api/admin/overdue").then(data => {
+    const tbody = document.getElementById("overdue-tbody");
+    const empty = document.getElementById("empty-state");
+    if (!data || data.length === 0) {
+      tbody.innerHTML = ""; empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      const now = new Date();
+      tbody.innerHTML = data.map(r => {
+        const borrowDate = new Date(r.borrow_time);
+        const overdueDays = Math.floor((now - borrowDate) / (1000 * 60 * 60 * 24)) - 30;
+        return `
+        <tr style="background:#fff5f5;">
+          <td>${r.id}</td>
+          <td><strong style="color:#c62828;">${r.book_name || "-"}</strong></td>
+          <td>${r.student_name || "-"}</td>
+          <td>${r.borrow_time ? r.borrow_time.replace("T"," ").slice(0,19) : "-"}</td>
+          <td><span class="tag tag-red">${Math.max(0, overdueDays)} 天</span></td>
+          <td><span class="tag tag-red">逾期</span></td>
+        </tr>`;
+      }).join("");
+    }
+  });
+}
+
+loadOverdue();
+</script>
+</body>
+</html>

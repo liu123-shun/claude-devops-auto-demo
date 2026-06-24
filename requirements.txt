@@ -1,7 +1,16 @@
-# 用户管理后端 — Python 依赖
+# ============================================================
+# 图书借阅管理系统 — Python 依赖
 # 安装方式: pip install -r requirements.txt
+# ============================================================
 
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
+sqlalchemy>=2.0.0
+pymysql>=1.1.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.9
+jinja2>=3.1.0
+python-dotenv>=1.0.0
 pytest>=8.0.0
 httpx>=0.27.0

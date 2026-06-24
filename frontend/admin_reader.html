@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生管理 — 管理后台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
+  <div class="user-info">
+    <span>👤 <span id="display-name">管理员</span></span>
+    <button onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="nav-group"><div class="nav-label">主菜单</div>
+    <a href="admin_index.html"><span class="icon">📊</span><span>首页看板</span></a></div>
+  <div class="nav-group"><div class="nav-label">业务管理</div>
+    <a href="admin_book.html"><span class="icon">📖</span><span>图书管理</span></a>
+    <a href="admin_reader.html" class="active"><span class="icon">👨‍🎓</span><span>学生管理</span></a></div>
+  <div class="nav-group"><div class="nav-label">日志审计</div>
+    <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
+    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅操作日志</span></a>
+    <a href="admin_overdue.html"><span class="icon">⚠️</span><span>逾期图书</span></a></div>
+</div>
+
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 学生管理</div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="toolbar" style="margin-bottom:0;">
+        <input type="text" id="search-input" placeholder="🔍 搜索学生姓名 / 班级...">
+        <button class="btn btn-primary btn-sm" onclick="searchReaders()">搜索</button>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ 新增学生</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>学生姓名</th><th>班级</th><th>手机号</th><th>绑定账号ID</th><th>操作</th></tr>
+        </thead>
+        <tbody id="reader-tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none;">暂无学生数据</div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- 新增/编辑弹窗 -->
+<div class="modal-overlay" id="reader-modal">
+  <div class="modal">
+    <div class="modal-header"><span id="modal-title">新增学生</span><button class="modal-close" onclick="closeModal('reader-modal')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-group"><label>学生姓名 *</label><input type="text" id="f-name" placeholder="请输入学生姓名"></div>
+      <div class="form-group"><label>班级</label><input type="text" id="f-class" placeholder="如：计算机2024-1班"></div>
+      <div class="form-group"><label>手机号</label><input type="text" id="f-phone" placeholder="请输入手机号"></div>
+      <div class="form-group"><label>绑定系统账号ID</label><input type="number" id="f-bind" placeholder="关联 sys_user.id（可选）"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('reader-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveReader()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-header">⚠️ 确认删除<span class="modal-close" onclick="closeModal('delete-modal')">&times;</span></div>
+    <div class="modal-body"><p>确定要删除学生 <strong id="del-name"></strong> 吗？</p></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('delete-modal')">取消</button>
+      <button class="btn btn-danger" id="del-confirm-btn">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user = checkAuth();
+if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
+displayUserInfo();
+
+let currentPage = 1;
+
+function searchReaders(page = 1) {
+  currentPage = page;
+  const keyword = document.getElementById("search-input").value.trim();
+  let url = `/api/admin/readers?page=${page}&page_size=10`;
+  if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+
+  apiGet(url).then(data => {
+    if (!data) return;
+    const tbody = document.getElementById("reader-tbody");
+    const empty = document.getElementById("empty-state");
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = ""; empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      tbody.innerHTML = data.items.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td><strong>${r.student_name}</strong></td>
+          <td>${r.class_ || "-"}</td>
+          <td>${r.phone || "-"}</td>
+          <td>${r.bind_user_id || "-"}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(r).replace(/'/g,"&#39;")})'>编辑</button>
+            <button class="btn btn-danger btn-sm" onclick='confirmDelete(${r.id},"${r.student_name}")'>删除</button>
+          </td>
+        </tr>`).join("");
+    }
+    renderPagination("pagination", data.page, data.total_pages, searchReaders);
+  });
+}
+
+function openAddModal() {
+  document.getElementById("modal-title").textContent = "新增学生";
+  document.getElementById("edit-id").value = "";
+  document.getElementById("f-name").value = "";
+  document.getElementById("f-class").value = "";
+  document.getElementById("f-phone").value = "";
+  document.getElementById("f-bind").value = "";
+  openModal("reader-modal");
+}
+
+function openEditModal(r) {
+  document.getElementById("modal-title").textContent = "编辑学生";
+  document.getElementById("edit-id").value = r.id;
+  document.getElementById("f-name").value = r.student_name;
+  document.getElementById("f-class").value = r.class_ || "";
+  document.getElementById("f-phone").value = r.phone || "";
+  document.getElementById("f-bind").value = r.bind_user_id || "";
+  openModal("reader-modal");
+}
+
+async function saveReader() {
+  const id = document.getElementById("edit-id").value;
+  const data = {
+    student_name: document.getElementById("f-name").value.trim(),
+    class_name: document.getElementById("f-class").value.trim() || null,
+    phone: document.getElementById("f-phone").value.trim() || null,
+    bind_user_id: parseInt(document.getElementById("f-bind").value) || null,
+  };
+  if (!data.student_name) { alert("学生姓名不能为空"); return; }
+
+  let result;
+  if (id) {
+    result = await apiPut(`/api/admin/readers/${id}`, data);
+  } else {
+    result = await apiPost("/api/admin/readers", data);
+  }
+  if (result && result.id) { closeModal("reader-modal"); searchReaders(currentPage); }
+}
+
+function confirmDelete(id, name) {
+  document.getElementById("del-name").textContent = name;
+  document.getElementById("del-confirm-btn").onclick = async () => {
+    await apiDelete(`/api/admin/readers/${id}`);
+    closeModal("delete-modal");
+    searchReaders(currentPage);
+  };
+  openModal("delete-modal");
+}
+
+searchReaders();
+</script>
+</body>
+</html>

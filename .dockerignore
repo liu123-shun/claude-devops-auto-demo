@@ -32,6 +32,8 @@ docs/
 # 测试残留
 .pytest_cache/
 *.pyc
+htmlcov/
+.coverage
 
 # 系统文件
 Thumbs.db
@@ -41,3 +43,9 @@ Thumbs.db
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+# 前端临时文件
+frontend/.DS_Store
+
+# 数据库卷
+mysql_data/

@@ -17,3 +17,12 @@ build/
 coverage/
 # Docker临时数据
 docker-data/
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# 测试数据库
+*.db

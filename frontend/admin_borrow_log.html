@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>借阅操作日志 — 管理后台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
+  <div class="user-info">
+    <span>👤 <span id="display-name">管理员</span></span>
+    <button onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="nav-group"><div class="nav-label">主菜单</div>
+    <a href="admin_index.html"><span class="icon">📊</span><span>首页看板</span></a></div>
+  <div class="nav-group"><div class="nav-label">业务管理</div>
+    <a href="admin_book.html"><span class="icon">📖</span><span>图书管理</span></a>
+    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a></div>
+  <div class="nav-group"><div class="nav-label">日志审计</div>
+    <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
+    <a href="admin_borrow_log.html" class="active"><span class="icon">📋</span><span>借阅操作日志</span></a>
+    <a href="admin_overdue.html"><span class="icon">⚠️</span><span>逾期图书</span></a></div>
+</div>
+
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 全局借阅操作日志</div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="toolbar" style="margin-bottom:0;">
+        <select id="filter-type">
+          <option value="">全部操作</option>
+          <option value="borrow">借书</option>
+          <option value="return">还书</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadLogs()">筛选</button>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="exportLogs()">📥 导出文本日志</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>借阅记录ID</th><th>操作类型</th><th>图书</th><th>学生</th><th>操作时间</th></tr>
+        </thead>
+        <tbody id="log-tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none;">暂无操作日志</div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user = checkAuth();
+if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
+displayUserInfo();
+
+let allLogsCache = [];
+
+function loadLogs(page = 1) {
+  const type = document.getElementById("filter-type").value;
+  let url = `/api/admin/borrow-logs?page=${page}&page_size=10`;
+  if (type) url += `&operate_type=${type}`;
+
+  apiGet(url).then(data => {
+    if (!data) return;
+    allLogsCache = data.items || [];
+    const tbody = document.getElementById("log-tbody");
+    const empty = document.getElementById("empty-state");
+    if (!data.items || data.items.length === 0) {
+      tbody.innerHTML = ""; empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      tbody.innerHTML = data.items.map(l => `
+        <tr>
+          <td>${l.id}</td>
+          <td>${l.borrow_record_id}</td>
+          <td>${l.operate_type === "borrow" ? '<span class="tag tag-yellow">借书</span>' : '<span class="tag tag-green">还书</span>'}</td>
+          <td>${l.book_name || "-"}</td>
+          <td>${l.student_name || "-"}</td>
+          <td>${l.operate_time ? l.operate_time.replace("T"," ").slice(0,19) : "-"}</td>
+        </tr>`).join("");
+    }
+    renderPagination("pagination", data.page, data.total_pages, loadLogs);
+  });
+}
+
+function exportLogs() {
+  if (allLogsCache.length === 0) { alert("暂无数据可导出"); return; }
+  let text = "借阅操作日志导出\n" + "=".repeat(50) + "\n\n";
+  allLogsCache.forEach(l => {
+    text += `[${l.operate_type === "borrow" ? "借书" : "还书"}] 图书:${l.book_name || "-"} 学生:${l.student_name || "-"} 时间:${l.operate_time || "-"}\n`;
+  });
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "borrow_logs.txt";
+  a.click();
+}
+
+loadLogs();
+</script>
+</body>
+</html>

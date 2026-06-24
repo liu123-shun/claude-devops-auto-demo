@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图书借阅管理系统 — 登录</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.login-card .role-info { font-size:12px; color:#6b8299; margin-top:4px; }
+.login-card .form-group input { height:42px; }
+.login-card .btn-primary { width:100%; justify-content:center; padding:12px; font-size:15px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="login-container">
+  <div class="login-card">
+    <h1>📚 图书借阅管理系统</h1>
+    <p class="subtitle">分角色登录 — 管理员 / 学生</p>
+
+    <div class="role-tabs">
+      <button class="role-tab active" data-role="admin">🔧 管理员</button>
+      <button class="role-tab" data-role="student">🎓 学 生</button>
+    </div>
+
+    <div id="login-error" class="login-error"></div>
+
+    <div class="form-group">
+      <label>账号</label>
+      <input type="text" id="username" placeholder="请输入账号" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <input type="password" id="password" placeholder="请输入密码">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:6px;">
+      <input type="checkbox" id="remember" style="width:auto;">
+      <label style="margin:0;font-weight:400;">记住账号</label>
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">登 录</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+let selectedRole = "admin";
+
+document.querySelectorAll(".role-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".role-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    selectedRole = tab.dataset.role;
+  });
+});
+
+document.getElementById("password").addEventListener("keydown", e => {
+  if (e.key === "Enter") doLogin();
+});
+
+// 记住账号
+const saved = localStorage.getItem("remembered_username");
+if (saved) {
+  document.getElementById("username").value = saved;
+  document.getElementById("remember").checked = true;
+}
+
+async function doLogin() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  const errEl = document.getElementById("login-error");
+  errEl.style.display = "none";
+
+  if (!username || !password) {
+    errEl.textContent = "请输入账号和密码";
+    errEl.style.display = "block";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, role: selectedRole }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setToken(data.token);
+      localStorage.setItem("user", JSON.stringify({
+        user_id: data.user_id,
+        username: data.username,
+        role: data.role,
+        name: data.name,
+      }));
+      if (document.getElementById("remember").checked) {
+        localStorage.setItem("remembered_username", username);
+      } else {
+        localStorage.removeItem("remembered_username");
+      }
+      if (data.role === "admin") {
+        window.location.href = "admin_index.html";
+      } else {
+        window.location.href = "student_index.html";
+      }
+    } else {
+      errEl.textContent = data.detail || "登录失败";
+      errEl.style.display = "block";
+    }
+  } catch (e) {
+    errEl.textContent = "网络连接失败，请检查服务器";
+    errEl.style.display = "block";
+  }
+}
+</script>
+</body>
+</html>

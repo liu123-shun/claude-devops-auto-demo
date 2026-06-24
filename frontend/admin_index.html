@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 — 首页看板</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
+  <div class="user-info">
+    <span>👤 <span id="display-name">管理员</span></span>
+    <span id="display-role">管理员</span>
+    <button onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<!-- 侧边栏 -->
+<div class="sidebar">
+  <div class="nav-group">
+    <div class="nav-label">主菜单</div>
+    <a href="admin_index.html" class="active"><span class="icon">📊</span><span>首页看板</span></a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">业务管理</div>
+    <a href="admin_book.html"><span class="icon">📖</span><span>图书管理</span></a>
+    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">日志审计</div>
+    <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
+    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅操作日志</span></a>
+    <a href="admin_overdue.html"><span class="icon">⚠️</span><span>逾期图书</span></a>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 数据看板</div>
+
+  <!-- 统计卡片 -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><div class="stat-value" id="stat-books">-</div><div class="stat-label">总图书数量</div></div>
+    <div class="stat-card warning"><div class="stat-value" id="stat-active">-</div><div class="stat-label">在借图书</div></div>
+    <div class="stat-card danger"><div class="stat-value" id="stat-overdue">-</div><div class="stat-label">逾期数量</div></div>
+    <div class="stat-card success"><div class="stat-value" id="stat-logins">-</div><div class="stat-label">今日登录人数</div></div>
+  </div>
+
+  <!-- 快速入口 -->
+  <div class="card">
+    <div class="card-title">⚡ 快速操作</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <a href="admin_book.html" class="btn btn-primary">📖 管理图书</a>
+      <a href="admin_reader.html" class="btn btn-success">👨‍🎓 管理学生</a>
+      <a href="admin_overdue.html" class="btn btn-danger">⚠️ 查看逾期</a>
+      <a href="admin_login_log.html" class="btn btn-outline">📝 登录日志</a>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user = checkAuth();
+if (!user || user.role !== "admin") {
+  alert("仅管理员可访问");
+  window.location.href = "login.html";
+}
+
+displayUserInfo();
+
+async function loadDashboard() {
+  try {
+    const data = await apiGet("/api/admin/dashboard");
+    if (!data) return;
+    document.getElementById("stat-books").textContent = data.total_books;
+    document.getElementById("stat-active").textContent = data.active_borrows;
+    document.getElementById("stat-overdue").textContent = data.overdue_count;
+    document.getElementById("stat-logins").textContent = data.today_logins;
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
