@@ -147,6 +147,57 @@ function renderPagination(containerId, page, totalPages, onPageClick) {
     });
 }
 
+// ---- 统一侧边栏渲染（所有页面共享同一份模板，杜绝跳变） ----
+function renderSidebar(role) {
+    const container = document.getElementById("sidebar");
+    if (!container) return;
+    const page = window.location.pathname.split("/").pop() || "";
+
+    // 管理员侧边栏模板
+    const adminMenu = [
+        { group: "主菜单", items: [
+            { href: "admin_index.html", icon: "📊", label: "首页看板" },
+            { href: "admin_charts.html", icon: "📈", label: "数据可视化" },
+        ]},
+        { group: "业务管理", items: [
+            { href: "admin_book.html", icon: "📖", label: "图书管理" },
+            { href: "admin_reader.html", icon: "👨‍🎓", label: "学生管理" },
+            { href: "admin_announcement.html", icon: "📢", label: "公告管理" },
+        ]},
+        { group: "日志审计", items: [
+            { href: "admin_login_log.html", icon: "📝", label: "登录日志" },
+            { href: "admin_borrow_log.html", icon: "📋", label: "借阅日志" },
+            { href: "admin_overdue.html", icon: "⚠️", label: "逾期图书" },
+        ]},
+    ];
+
+    // 学生侧边栏模板
+    const studentMenu = [
+        { group: "主菜单", items: [
+            { href: "student_index.html", icon: "📊", label: "我的首页" },
+            { href: "student_books.html", icon: "📚", label: "馆藏浏览" },
+        ]},
+        { group: "我的记录", items: [
+            { href: "student_my_borrow.html", icon: "📖", label: "我的借阅" },
+            { href: "student_stats.html", icon: "📈", label: "阅读统计" },
+            { href: "student_my_login_log.html", icon: "📝", label: "登录日志" },
+        ]},
+    ];
+
+    const menu = role === "admin" ? adminMenu : studentMenu;
+
+    let html = "";
+    for (const g of menu) {
+        html += `<div class="nav-group"><div class="nav-label">${g.group}</div>`;
+        for (const item of g.items) {
+            const isActive = page === item.href ? " active" : "";
+            html += `<a href="${item.href}" class="${isActive.trim()}"><span class="icon">${item.icon}</span><span>${item.label}</span></a>`;
+        }
+        html += "</div>";
+    }
+    container.innerHTML = html;
+}
+
 // ---- 状态标签 ----
 function statusTag(status) {
     const map = {

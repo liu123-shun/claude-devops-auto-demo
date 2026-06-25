@@ -32,20 +32,7 @@
   </div>
 </div>
 
-<div class="sidebar">
-  <div class="nav-group"><div class="nav-label">主菜单</div>
-    <a href="admin_index.html" class="active"><span class="icon">📊</span><span>首页看板</span></a>
-    <a href="admin_charts.html"><span class="icon">📈</span><span>数据可视化</span></a></div>
-  <div class="nav-group"><div class="nav-label">业务管理</div>
-    <a href="admin_book.html"><span class="icon">📖</span><span>图书管理</span></a>
-    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a>
-    <a href="admin_announcement.html"><span class="icon">📢</span><span>公告管理</span></a></div>
-  <div class="nav-group"><div class="nav-label">日志审计</div>
-    <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
-    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅日志</span></a>
-    <a href="admin_overdue.html"><span class="icon">⚠️</span><span>逾期图书</span></a></div>
-</div>
-
+<div class="sidebar" id="sidebar"></div>
 <div class="main-content">
   <div class="breadcrumb">🏠 首页 / 数据看板</div>
 
@@ -104,6 +91,7 @@
 const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
+renderSidebar("admin");
 
 async function loadDashboard() {
   const data = await apiGet("/api/admin/dashboard");

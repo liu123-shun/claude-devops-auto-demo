@@ -22,15 +22,7 @@
   <div class="logo">📚 图书借阅管理系统 · 学生端</div>
   <div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div>
 </div>
-<div class="sidebar">
-  <div class="nav-group"><div class="nav-label">主菜单</div>
-    <a href="student_index.html"><span class="icon">📊</span><span>我的首页</span></a>
-    <a href="student_books.html"><span class="icon">📚</span><span>馆藏浏览</span></a></div>
-  <div class="nav-group"><div class="nav-label">我的记录</div>
-    <a href="student_my_borrow.html"><span class="icon">📖</span><span>我的借阅</span></a>
-    <a href="student_stats.html" class="active"><span class="icon">📈</span><span>阅读统计</span></a>
-    <a href="student_my_login_log.html"><span class="icon">📝</span><span>登录日志</span></a></div>
-</div>
+<div class="sidebar" id="sidebar"></div>
 <div class="main-content">
   <div class="breadcrumb">🏠 首页 / 阅读统计</div>
 
@@ -42,6 +34,7 @@
 const user=checkAuth();
 if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
 displayUserInfo();
+renderSidebar("student");
 
 async function init(){
   const s=await apiGet("/api/student/stats");
