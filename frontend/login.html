@@ -6,109 +6,325 @@
 <title>图书借阅管理系统 — 登录</title>
 <link rel="stylesheet" href="style.css">
 <style>
-.login-card .role-info { font-size:12px; color:#6b8299; margin-top:4px; }
-.login-card .form-group input { height:42px; }
-.login-card .btn-primary { width:100%; justify-content:center; padding:12px; font-size:15px; margin-top:8px; }
+/* ---- 登录页专属 ---- */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #1a1a2e 100%);
+    position: relative;
+    overflow: hidden;
+}
+.login-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+}
+.login-wrapper {
+    display: flex;
+    width: 100%;
+    max-width: 1050px;
+    margin: auto;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    z-index: 1;
+}
+.login-left {
+    flex: 1;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: #fff;
+    background: linear-gradient(160deg, rgba(74,144,217,0.35) 0%, rgba(15,52,96,0.6) 100%);
+}
+.login-left h2 { font-size: 32px; margin-bottom: 8px; font-weight: 800; letter-spacing: 1px; }
+.login-left .sub { font-size: 14px; opacity: .7; margin-bottom: 32px; line-height: 1.6; }
+.login-left .feature { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; font-size: 14px; opacity: .9; }
+.login-left .feature .dot { width: 8px; height: 8px; border-radius: 50%; background: #6db3f2; flex-shrink: 0; }
+.login-left .stats-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+.login-left .stat-mini { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; text-align: center; }
+.login-left .stat-mini .val { font-size: 26px; font-weight: 700; color: #6db3f2; }
+.login-left .stat-mini .lbl { font-size: 11px; opacity: .7; margin-top: 2px; }
+
+.login-right {
+    flex: 1;
+    padding: 50px 45px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.login-right h3 { font-size: 22px; color: #2c3e50; margin-bottom: 4px; font-weight: 700; }
+.login-right .subtitle { font-size: 13px; color: #6b8299; margin-bottom: 24px; }
+
+.role-tabs { display: flex; gap: 0; margin-bottom: 20px; background: #f0f4f8; border-radius: 10px; padding: 4px; }
+.role-tab { flex: 1; text-align: center; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all .2s; border: none; background: transparent; color: #6b8299; }
+.role-tab.active { background: #fff; color: #4a90d9; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 700; color: #6b8299; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1.5px solid #dce3ea; border-radius: 10px; font-size: 14px; outline: none; transition: all .2s; background: #fafbfc; }
+.form-group input:focus { border-color: #4a90d9; box-shadow: 0 0 0 3px rgba(74,144,217,0.1); background: #fff; }
+
+.captcha-row { display: flex; gap: 10px; align-items: flex-end; }
+.captcha-row .captcha-img { flex: 1; height: 44px; border-radius: 10px; cursor: pointer; background: #f0f4f8; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; letter-spacing: 6px; color: #4a90d9; user-select: none; border: 1.5px solid #dce3ea; transition: all .2s; }
+.captcha-row .captcha-img:hover { border-color: #4a90d9; }
+.captcha-row input { width: 110px !important; flex-shrink: 0; }
+.captcha-row .refresh-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px; color: #6b8299; flex-shrink: 0; }
+.captcha-row .refresh-btn:hover { color: #4a90d9; }
+
+.login-error { background: #fff0f0; color: #c62828; padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; display: none; border: 1px solid #ffcdd2; }
+.login-success { background: #e8f5e9; color: #2e7d32; display: none; }
+
+.btn-login { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; background: linear-gradient(135deg, #4a90d9, #357abd); color: #fff; transition: all .2s; margin-top: 4px; }
+.btn-login:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74,144,217,0.35); }
+.btn-login:active { transform: scale(0.98); }
+
+.remember-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+.remember-row label { display: flex; align-items: center; gap: 6px; color: #6b8299; cursor: pointer; font-weight: 400 !important; text-transform: none !important; letter-spacing: 0 !important; }
+.remember-row input[type=checkbox] { width: auto; }
+.register-link { color: #4a90d9; cursor: pointer; font-weight: 600; }
+.register-link:hover { text-decoration: underline; }
+
+/* 注册弹窗 */
+.register-modal .form-group { margin-bottom: 10px; }
+.register-modal .form-group input { padding: 8px 12px; font-size: 13px; }
+.register-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+
+@media (max-width: 800px) {
+    .login-left { display: none; }
+    .login-wrapper { margin: 16px; border-radius: 16px; }
+    .login-right { padding: 32px 24px; }
+}
 </style>
 </head>
 <body>
-<div class="login-container">
-  <div class="login-card">
-    <h1>📚 图书借阅管理系统</h1>
-    <p class="subtitle">分角色登录 — 管理员 / 学生</p>
 
-    <div class="role-tabs">
-      <button class="role-tab active" data-role="admin">🔧 管理员</button>
-      <button class="role-tab" data-role="student">🎓 学 生</button>
+<!-- 左侧装饰 -->
+<div class="login-page">
+  <div class="login-wrapper">
+    <div class="login-left">
+      <h2>📚 图书借阅<br>管理系统</h2>
+      <p class="sub">高效 · 智能 · 安全的校园图书管理平台</p>
+      <div class="feature"><span class="dot"></span>管理员：图书管理 / 学生管理 / 公告发布</div>
+      <div class="feature"><span class="dot"></span>全员：借书 / 还书 / 记录查询</div>
+      <div class="feature"><span class="dot"></span>数据分析：可视化图表 / 统计报表</div>
+      <div class="feature"><span class="dot"></span>安全认证：JWT + 验证码 + 密码加密</div>
+      <div class="stats-row-inline" id="public-stats"></div>
     </div>
 
-    <div id="login-error" class="login-error"></div>
+    <!-- 右侧登录表单 -->
+    <div class="login-right" id="login-panel">
+      <h3>用户登录</h3>
+      <p class="subtitle">选择角色进入系统</p>
 
-    <div class="form-group">
-      <label>账号</label>
-      <input type="text" id="username" placeholder="请输入账号" autocomplete="off">
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="admin">🔧 管理员</button>
+        <button class="role-tab" data-role="student">🎓 学 生</button>
+      </div>
+
+      <div id="login-error" class="login-error"></div>
+
+      <div class="form-group"><label>账 号</label><input type="text" id="username" placeholder="请输入账号" autocomplete="off"></div>
+      <div class="form-group"><label>密 码</label><input type="password" id="password" placeholder="请输入密码"></div>
+
+      <div class="form-group">
+        <label>验 证 码</label>
+        <div class="captcha-row">
+          <div class="captcha-img" id="captcha-img" onclick="refreshCaptcha()" title="点击刷新">----</div>
+          <input type="text" id="captcha-input" placeholder="验证码" maxlength="6" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="remember-row">
+        <label><input type="checkbox" id="remember"> 记住账号</label>
+        <span class="register-link" onclick="openRegister()">没有账号？立即注册</span>
+      </div>
+
+      <button class="btn-login" onclick="doLogin()">登 录</button>
     </div>
-    <div class="form-group">
-      <label>密码</label>
-      <input type="password" id="password" placeholder="请输入密码">
+
+    <!-- 注册面板（切换显示） -->
+    <div class="login-right" id="register-panel" style="display:none;">
+      <h3>学生注册</h3>
+      <p class="subtitle">创建账号后自动登录</p>
+      <div id="reg-error" class="login-error"></div>
+      <div id="reg-success" class="login-success"></div>
+
+      <div class="register-row">
+        <div class="form-group"><label>登录账号</label><input type="text" id="reg-username" placeholder="英文字母+数字" autocomplete="off"></div>
+        <div class="form-group"><label>真实姓名</label><input type="text" id="reg-name" placeholder="如：张三"></div>
+      </div>
+      <div class="register-row">
+        <div class="form-group"><label>密 码</label><input type="password" id="reg-password" placeholder="至少4位"></div>
+        <div class="form-group"><label>手机号</label><input type="text" id="reg-phone" placeholder="选填"></div>
+      </div>
+      <div class="form-group"><label>班 级</label><input type="text" id="reg-class" placeholder="如：计算机2024-1班（选填）"></div>
+
+      <div class="form-group">
+        <label>验 证 码</label>
+        <div class="captcha-row">
+          <div class="captcha-img" id="reg-captcha-img" onclick="refreshRegCaptcha()" title="点击刷新">----</div>
+          <input type="text" id="reg-captcha-input" placeholder="验证码" maxlength="6" autocomplete="off">
+        </div>
+      </div>
+
+      <button class="btn-login" onclick="doRegister()">注 册</button>
+      <div style="text-align:center;margin-top:14px;font-size:13px;color:#6b8299;">
+        已有账号？<span class="register-link" onclick="switchToLogin()">返回登录</span>
+      </div>
     </div>
-    <div class="form-group" style="display:flex;align-items:center;gap:6px;">
-      <input type="checkbox" id="remember" style="width:auto;">
-      <label style="margin:0;font-weight:400;">记住账号</label>
-    </div>
-    <button class="btn btn-primary" onclick="doLogin()">登 录</button>
   </div>
 </div>
 
 <script src="app.js"></script>
 <script>
-let selectedRole = "admin";
+var selectedRole = "admin";
+var captchaToken = "";
+var regCaptchaToken = "";
 
-document.querySelectorAll(".role-tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".role-tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    selectedRole = tab.dataset.role;
-  });
+// ---- 角色切换 ----
+document.querySelectorAll(".role-tab").forEach(function(tab) {
+    tab.addEventListener("click", function() {
+        document.querySelectorAll(".role-tab").forEach(function(t) { t.classList.remove("active"); });
+        tab.classList.add("active");
+        selectedRole = tab.dataset.role;
+    });
 });
 
-document.getElementById("password").addEventListener("keydown", e => {
-  if (e.key === "Enter") doLogin();
+document.getElementById("password").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") doLogin();
 });
 
 // 记住账号
-const saved = localStorage.getItem("remembered_username");
+var saved = localStorage.getItem("remembered_username");
 if (saved) {
-  document.getElementById("username").value = saved;
-  document.getElementById("remember").checked = true;
+    document.getElementById("username").value = saved;
+    document.getElementById("remember").checked = true;
 }
 
+// ---- 验证码 ----
+async function refreshCaptcha() {
+    try {
+        var res = await fetch("/api/auth/captcha");
+        var data = await res.json();
+        captchaToken = data.captcha_token;
+        var img = document.getElementById("captcha-img");
+        if (data.image) {
+            img.innerHTML = '<img src="' + data.image + '" style="max-height:42px;border-radius:8px;" />';
+        } else {
+            img.innerHTML = data.code_hint;
+            img.style.letterSpacing = "8px";
+        }
+    } catch(e) { document.getElementById("captcha-img").textContent = "点击刷新"; }
+}
+
+async function refreshRegCaptcha() {
+    try {
+        var res = await fetch("/api/auth/captcha");
+        var data = await res.json();
+        regCaptchaToken = data.captcha_token;
+        var img = document.getElementById("reg-captcha-img");
+        if (data.image) {
+            img.innerHTML = '<img src="' + data.image + '" style="max-height:42px;border-radius:8px;" />';
+        } else {
+            img.innerHTML = data.code_hint;
+            img.style.letterSpacing = "8px";
+        }
+    } catch(e) { document.getElementById("reg-captcha-img").textContent = "点击刷新"; }
+}
+
+// ---- 登录 ----
 async function doLogin() {
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value;
-  const errEl = document.getElementById("login-error");
-  errEl.style.display = "none";
+    var username = document.getElementById("username").value.trim();
+    var password = document.getElementById("password").value;
+    var captchaCode = document.getElementById("captcha-input").value.trim();
+    var errEl = document.getElementById("login-error");
+    errEl.style.display = "none";
 
-  if (!username || !password) {
-    errEl.textContent = "请输入账号和密码";
-    errEl.style.display = "block";
-    return;
-  }
+    if (!username || !password) { errEl.textContent = "请输入账号和密码"; errEl.style.display = "block"; return; }
+    if (!captchaCode) { errEl.textContent = "请输入验证码"; errEl.style.display = "block"; return; }
 
-  try {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, role: selectedRole }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setToken(data.token);
-      localStorage.setItem("user", JSON.stringify({
-        user_id: data.user_id,
-        username: data.username,
-        role: data.role,
-        name: data.name,
-      }));
-      if (document.getElementById("remember").checked) {
-        localStorage.setItem("remembered_username", username);
-      } else {
-        localStorage.removeItem("remembered_username");
-      }
-      if (data.role === "admin") {
-        window.location.href = "admin_index.html";
-      } else {
-        window.location.href = "student_index.html";
-      }
-    } else {
-      errEl.textContent = data.detail || "登录失败";
-      errEl.style.display = "block";
-    }
-  } catch (e) {
-    errEl.textContent = "网络连接失败，请检查服务器";
-    errEl.style.display = "block";
-  }
+    try {
+        var res = await fetch("/api/auth/login", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: username, password: password, role: selectedRole, captcha_token: captchaToken, captcha_code: captchaCode }),
+        });
+        var data = await res.json();
+        if (res.ok) {
+            setToken(data.token);
+            localStorage.setItem("user", JSON.stringify({ user_id: data.user_id, username: data.username, role: data.role, name: data.name }));
+            if (document.getElementById("remember").checked) {
+                localStorage.setItem("remembered_username", username);
+            } else { localStorage.removeItem("remembered_username"); }
+            window.location.href = data.role === "admin" ? "admin_index.html" : "student_index.html";
+        } else {
+            errEl.textContent = data.detail || "登录失败";
+            errEl.style.display = "block";
+            refreshCaptcha();
+        }
+    } catch (e) { errEl.textContent = "网络连接失败"; errEl.style.display = "block"; }
 }
+
+// ---- 注册面板切换 ----
+function openRegister() {
+    document.getElementById("login-panel").style.display = "none";
+    document.getElementById("register-panel").style.display = "";
+    refreshRegCaptcha();
+}
+function switchToLogin() {
+    document.getElementById("register-panel").style.display = "none";
+    document.getElementById("login-panel").style.display = "";
+    refreshCaptcha();
+}
+
+// ---- 注册 ----
+async function doRegister() {
+    var username = document.getElementById("reg-username").value.trim();
+    var name = document.getElementById("reg-name").value.trim();
+    var password = document.getElementById("reg-password").value;
+    var phone = document.getElementById("reg-phone").value.trim();
+    var className = document.getElementById("reg-class").value.trim();
+    var captchaCode = document.getElementById("reg-captcha-input").value.trim();
+    var errEl = document.getElementById("reg-error");
+    errEl.style.display = "none";
+
+    if (!username || !name || !password) { errEl.textContent = "账号、姓名、密码为必填"; errEl.style.display = "block"; return; }
+    if (username.length < 2) { errEl.textContent = "账号至少2个字符"; errEl.style.display = "block"; return; }
+    if (password.length < 4) { errEl.textContent = "密码至少4位"; errEl.style.display = "block"; return; }
+    if (!captchaCode) { errEl.textContent = "请输入验证码"; errEl.style.display = "block"; return; }
+
+    try {
+        var res = await fetch("/api/auth/register", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: username, password: password, name: name, phone: phone, class_name: className, captcha_token: regCaptchaToken, captcha_code: captchaCode }),
+        });
+        var data = await res.json();
+        if (res.ok) {
+            setToken(data.token);
+            localStorage.setItem("user", JSON.stringify({ user_id: data.user_id, username: data.username, role: data.role, name: data.name }));
+            window.location.href = "student_index.html";
+        } else {
+            errEl.textContent = data.detail || "注册失败";
+            errEl.style.display = "block";
+            refreshRegCaptcha();
+        }
+    } catch (e) { errEl.textContent = "网络连接失败"; errEl.style.display = "block"; }
+}
+
+// 初始化
+refreshCaptcha();
+
+// 加载公共统计
+try {
+    fetch("/api/auth/captcha").then(function(){});
+} catch(e) {}
 </script>
 </body>
 </html>
