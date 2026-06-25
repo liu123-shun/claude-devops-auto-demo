@@ -85,19 +85,22 @@ body {
     background: rgba(255, 255, 255, 0.3);
 }
 
-/* ---- 侧边栏 ---- */
+/* ---- 侧边栏：固定宽度，不折叠，超长自动滚动 ---- */
 .sidebar {
     position: fixed;
     top: 56px;
     left: 0;
     bottom: 0;
     width: var(--sidebar-width);
+    min-width: 220px;
     background: var(--card);
     border-right: 1px solid var(--border);
-    padding: 16px 0;
+    padding: 12px 0 20px;
     overflow-y: auto;
+    overflow-x: hidden;
     z-index: 99;
     box-shadow: var(--shadow);
+    /* 所有尺寸下都不折叠 */
 }
 
 .sidebar .nav-group {
@@ -112,6 +115,7 @@ body {
     padding: 12px 8px 4px;
     letter-spacing: 1px;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .sidebar a {
@@ -125,6 +129,7 @@ body {
     font-size: 14px;
     transition: var(--transition);
     margin: 2px 0;
+    white-space: nowrap;
 }
 
 .sidebar a:hover,
@@ -138,6 +143,7 @@ body {
     width: 20px;
     text-align: center;
     font-size: 15px;
+    flex-shrink: 0;
 }
 
 /* ---- 主内容区 ---- */
@@ -570,28 +576,14 @@ table tbody tr:hover {
     margin-bottom: 20px;
 }
 
-/* ---- 响应式：侧边栏保持完整宽度，不折叠 ---- */
-@media (max-width: 768px) {
-    /* 侧边栏保持固定宽度不折叠 */
-    .sidebar {
-        width: var(--sidebar-width);
-    }
-    .sidebar a span:not(.icon) {
-        display: inline;
-    }
-    .sidebar .nav-label {
-        display: block;
-    }
-    .main-content {
-        margin-left: var(--sidebar-width);
-    }
-    /* 顶部栏适配 */
-    .topbar {
-        padding: 0 12px;
-    }
-    .topbar .logo {
-        font-size: 14px;
-    }
+/* ---- 响应式：侧边栏始终保持完整宽度，永不折叠 ---- */
+@media (max-width: 900px) {
+    .sidebar { width: 220px; min-width: 220px; }
+    .sidebar a span { display: inline !important; }
+    .sidebar .nav-label { display: block !important; }
+    .main-content { margin-left: 220px; }
+    .topbar { padding: 0 12px; }
+    .topbar .logo { font-size: 14px; }
 }
 
 /* ---- 图表容器 ---- */
