@@ -73,6 +73,95 @@ def dashboard(db: Session = Depends(get_db)):
     return stats
 
 
+# ==================== 数据可视化 ====================
+
+@router.get("/charts/overview")
+def charts_overview(db: Session = Depends(get_db)):
+    """综合可视化数据：分类饼图、月度趋势、读者排行、逾期分布、借阅热度"""
+    from datetime import datetime, timedelta
+    now = datetime.now()
+
+    # 1) 分类饼图
+    cat_rows = db.query(Book.category, func.count(Book.id)).filter(Book.category.isnot(None), Book.category != "").group_by(Book.category).all()
+    pie_labels = [c for c, _ in cat_rows]
+    pie_data = [n for _, n in cat_rows]
+    pie_colors = ["#4a90d9","#27ae60","#f39c12","#e74c3c","#9b59b6","#1abc9c","#e67e22","#3498db","#2ecc71","#f1c40f"]
+
+    # 2) 月度借阅趋势（近12个月）
+    monthly_labels = []; monthly_borrow = []; monthly_return = []
+    for i in range(11, -1, -1):
+        start = (now.replace(day=1) - timedelta(days=30*i)).replace(day=1)
+        end = (start.replace(day=28) + timedelta(days=4)).replace(day=1) if start.month == 12 else start.replace(month=start.month+1, day=1)
+        monthly_labels.append(start.strftime("%Y-%m"))
+        monthly_borrow.append(db.query(BorrowRecord).filter(
+            BorrowRecord.borrow_time >= start, BorrowRecord.borrow_time < end).count())
+        monthly_return.append(db.query(BorrowRecord).filter(
+            BorrowRecord.return_time >= start, BorrowRecord.return_time < end).count())
+
+    # 3) 读者借阅排行 Top 10
+    reader_rows = db.query(Reader.student_name, func.count(BorrowRecord.id)).join(
+        BorrowRecord, BorrowRecord.reader_id == Reader.id
+    ).group_by(Reader.id).order_by(func.count(BorrowRecord.id).desc()).limit(10).all()
+    reader_labels = [r[0] for r in reader_rows]
+    reader_data = [r[1] for r in reader_rows]
+
+    # 4) 库存分布直方图
+    all_stocks = [s[0] for s in db.query(Book.stock).all()]
+    bins = {"0":0,"1-2":0,"3-5":0,"6-10":0,"10+":0}
+    for s in all_stocks:
+        if s == 0: bins["0"]+=1
+        elif s <= 2: bins["1-2"]+=1
+        elif s <= 5: bins["3-5"]+=1
+        elif s <= 10: bins["6-10"]+=1
+        else: bins["10+"]+=1
+    hist_labels = list(bins.keys())
+    hist_data = list(bins.values())
+
+    # 5) 每天借阅热力（近30天按星期分布）
+    daily_labels = ["周一","周二","周三","周四","周五","周六","周日"]
+    daily_borrows = [0]*7; daily_returns = [0]*7
+    cutoff = now - timedelta(days=30)
+    records = db.query(BorrowRecord).filter(BorrowRecord.borrow_time >= cutoff).all()
+    for r in records:
+        if r.borrow_time:
+            daily_borrows[r.borrow_time.weekday()] += 1
+        if r.return_time and r.return_time >= cutoff:
+            daily_returns[r.return_time.weekday()] += 1
+
+    # 6) 逾期天数分布
+    threshold = now - timedelta(days=30)
+    overdue_records = db.query(BorrowRecord).filter(
+        BorrowRecord.return_time.is_(None), BorrowRecord.borrow_time < threshold).all()
+    overdue_days_data = [max(0, (now - r.borrow_time).days - 30) for r in overdue_records]
+    od_bins = {"30-40天":0,"41-50天":0,"51-60天":0,"60天+":0}
+    for d in overdue_days_data:
+        if d <= 40: od_bins["30-40天"]+=1
+        elif d <= 50: od_bins["41-50天"]+=1
+        elif d <= 60: od_bins["51-60天"]+=1
+        else: od_bins["60天+"]+=1
+
+    # 7) 出版社分布
+    pub_rows = db.query(Book.publisher, func.count(Book.id)).filter(
+        Book.publisher.isnot(None), Book.publisher != ""
+    ).group_by(Book.publisher).order_by(func.count(Book.id).desc()).limit(8).all()
+
+    # 8) 学生年级分布
+    class_rows = db.query(Reader.class_, func.count(Reader.id)).filter(
+        Reader.class_.isnot(None), Reader.class_ != ""
+    ).group_by(Reader.class_).all()
+
+    return {
+        "pie": {"labels": pie_labels, "data": pie_data, "colors": pie_colors[:len(pie_labels)]},
+        "monthly": {"labels": monthly_labels, "borrow": monthly_borrow, "return": monthly_return},
+        "readers": {"labels": reader_labels, "data": reader_data},
+        "histogram": {"labels": hist_labels, "data": hist_data},
+        "daily": {"labels": daily_labels, "borrows": daily_borrows, "returns": daily_returns},
+        "overdue_bins": {"labels": list(od_bins.keys()), "data": list(od_bins.values())},
+        "publishers": {"labels": [p[0] or "未知" for p in pub_rows], "data": [p[1] for p in pub_rows]},
+        "classes": {"labels": [c[0] or "未设置" for c in class_rows], "data": [c[1] for c in class_rows]},
+    }
+
+
 # ==================== 图书管理 ====================
 
 @router.get("/books")

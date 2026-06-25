@@ -570,18 +570,46 @@ table tbody tr:hover {
     margin-bottom: 20px;
 }
 
-/* ---- 响应式 ---- */
+/* ---- 响应式：侧边栏保持完整宽度，不折叠 ---- */
 @media (max-width: 768px) {
+    /* 侧边栏保持固定宽度不折叠 */
     .sidebar {
-        width: 60px;
+        width: var(--sidebar-width);
     }
     .sidebar a span:not(.icon) {
-        display: none;
+        display: inline;
     }
     .sidebar .nav-label {
-        display: none;
+        display: block;
     }
     .main-content {
-        margin-left: 60px;
+        margin-left: var(--sidebar-width);
     }
+    /* 顶部栏适配 */
+    .topbar {
+        padding: 0 12px;
+    }
+    .topbar .logo {
+        font-size: 14px;
+    }
+}
+
+/* ---- 图表容器 ---- */
+.chart-wrap {
+    position: relative;
+    width: 100%;
+}
+.chart-wrap canvas {
+    width: 100% !important;
+}
+.chart-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 20px;
+}
+.chart-col-2 { grid-template-columns: 1fr 1fr; }
+.chart-col-3 { grid-template-columns: repeat(3, 1fr); }
+.chart-full { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+    .chart-row, .chart-col-2, .chart-col-3 { grid-template-columns: 1fr; }
 }

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据可视化 — 管理后台</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+canvas { max-height:340px; }
+.chart-card { background:#fff; border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,0.06); padding:20px; }
+.chart-card h3 { font-size:14px; margin-bottom:12px; color:#2c3e50; }
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.kpi-item { background:linear-gradient(135deg,var(--c1),var(--c2)); color:#fff; border-radius:10px; padding:16px; text-align:center; }
+.kpi-item .kpi-val { font-size:30px; font-weight:700; }
+.kpi-item .kpi-lbl { font-size:11px; opacity:.85; margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
+  <div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div>
+</div>
+<div class="sidebar">
+  <div class="nav-group"><div class="nav-label">主菜单</div>
+    <a href="admin_index.html"><span class="icon">📊</span><span>首页看板</span></a>
+    <a href="admin_charts.html" class="active"><span class="icon">📈</span><span>数据可视化</span></a></div>
+  <div class="nav-group"><div class="nav-label">业务管理</div>
+    <a href="admin_book.html"><span class="icon">📖</span><span>图书管理</span></a>
+    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a>
+    <a href="admin_announcement.html"><span class="icon">📢</span><span>公告管理</span></a></div>
+  <div class="nav-group"><div class="nav-label">日志审计</div>
+    <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
+    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅日志</span></a>
+    <a href="admin_overdue.html"><span class="icon">⚠️</span><span>逾期图书</span></a></div>
+</div>
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 数据可视化</div>
+
+  <!-- KPI -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Row 1: 饼图 + 柱状图 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:20px;">
+    <div class="chart-card"><h3>🍩 图书分类分布（饼图）</h3><div class="chart-wrap"><canvas id="chartPie"></canvas></div></div>
+    <div class="chart-card"><h3>📊 读者借阅排行（柱状图）</h3><div class="chart-wrap"><canvas id="chartReaderBar"></canvas></div></div>
+  </div>
+
+  <!-- Row 2: 折线图 + 直方图 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:20px;">
+    <div class="chart-card"><h3>📈 月度借还趋势（折线图）</h3><div class="chart-wrap"><canvas id="chartMonthly"></canvas></div></div>
+    <div class="chart-card"><h3>📊 库存分布（直方图）</h3><div class="chart-wrap"><canvas id="chartHistogram"></canvas></div></div>
+  </div>
+
+  <!-- Row 3: 周热力图 + 逾期分布 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:20px;">
+    <div class="chart-card"><h3>🔥 每周借阅热度（双柱）</h3><div class="chart-wrap"><canvas id="chartDaily"></canvas></div></div>
+    <div class="chart-card"><h3>⚠️ 逾期天数分布（箱线风格柱状图）</h3><div class="chart-wrap"><canvas id="chartOverdue"></canvas></div></div>
+  </div>
+
+  <!-- Row 4: 出版社 + 班级 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:20px;">
+    <div class="chart-card"><h3>🏢 出版社分布（横向柱状图）</h3><div class="chart-wrap"><canvas id="chartPublisher"></canvas></div></div>
+    <div class="chart-card"><h3>🎓 学生班级分布（圆环图）</h3><div class="chart-wrap"><canvas id="chartClass"></canvas></div></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user=checkAuth();
+if(!user||user.role!=="admin"){alert("仅管理员可访问");window.location.href="login.html";}
+displayUserInfo();
+
+const COLORS=['#4a90d9','#27ae60','#f39c12','#e74c3c','#9b59b6','#1abc9c','#e67e22','#3498db','#2ecc71','#e91e63','#00bcd4','#ff5722'];
+const COLORS_ALPHA=['rgba(74,144,217,0.7)','rgba(39,174,96,0.7)','rgba(243,156,18,0.7)','rgba(231,76,60,0.7)','rgba(155,89,182,0.7)','rgba(26,188,156,0.7)'];
+
+async function init(){
+  const d=await apiGet("/api/admin/charts/overview");
+  if(!d)return;
+  const dash=await apiGet("/api/admin/dashboard");
+
+  // KPI
+  if(dash){
+    document.getElementById("kpi-grid").innerHTML=`
+      <div class="kpi-item" style="--c1:#4a90d9;--c2:#6db3f2;"><div class="kpi-val">${dash.total_books}</div><div class="kpi-lbl">馆藏图书</div></div>
+      <div class="kpi-item" style="--c1:#27ae60;--c2:#2ecc71;"><div class="kpi-val">${dash.total_students||'-'}</div><div class="kpi-lbl">读者人数</div></div>
+      <div class="kpi-item" style="--c1:#f39c12;--c2:#f1c40f;"><div class="kpi-val">${dash.active_borrows}</div><div class="kpi-lbl">在借图书</div></div>
+      <div class="kpi-item" style="--c1:#e74c3c;--c2:#e67e22;"><div class="kpi-val">${dash.overdue_count}</div><div class="kpi-lbl">逾期数量</div></div>
+      <div class="kpi-item" style="--c1:#9b59b6;--c2:#a569bd;"><div class="kpi-val">${dash.today_logins}</div><div class="kpi-lbl">今日登录</div></div>
+    `;
+  }
+
+  // 饼图
+  new Chart(document.getElementById("chartPie"),{type:"doughnut",data:{labels:d.pie.labels,datasets:[{data:d.pie.data,backgroundColor:d.pie.colors,borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,plugins:{legend:{position:"right",labels:{font:{size:11}}}}}});
+
+  // 读者排行柱状图
+  new Chart(document.getElementById("chartReaderBar"),{type:"bar",data:{labels:d.readers.labels,datasets:[{label:"借阅数",data:d.readers.data,backgroundColor:COLORS_ALPHA,borderColor:COLORS,borderWidth:2,borderRadius:6}]},options:{responsive:true,indexAxis:"x",plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // 月度折线图
+  new Chart(document.getElementById("chartMonthly"),{type:"line",data:{labels:d.monthly.labels,datasets:[{label:"借阅",data:d.monthly.borrow,borderColor:"#4a90d9",backgroundColor:"rgba(74,144,217,0.1)",fill:true,tension:.4,pointRadius:3},{label:"归还",data:d.monthly.return,borderColor:"#27ae60",backgroundColor:"rgba(39,174,96,0.1)",fill:true,tension:.4,pointRadius:3}]},options:{responsive:true,scales:{y:{beginAtZero:true}}}});
+
+  // 直方图
+  new Chart(document.getElementById("chartHistogram"),{type:"bar",data:{labels:d.histogram.labels,datasets:[{label:"图书数",data:d.histogram.data,backgroundColor:["#ffebee","#fff3e0","#e8f5e9","#e3f2fd","#f3e5f5"],borderColor:["#e74c3c","#f39c12","#27ae60","#4a90d9","#9b59b6"],borderWidth:2,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // 每周热度
+  new Chart(document.getElementById("chartDaily"),{type:"bar",data:{labels:d.daily.labels,datasets:[{label:"借阅",data:d.daily.borrows,backgroundColor:"rgba(74,144,217,0.75)",borderColor:"#4a90d9",borderWidth:1,borderRadius:4},{label:"归还",data:d.daily.returns,backgroundColor:"rgba(39,174,96,0.75)",borderColor:"#27ae60",borderWidth:1,borderRadius:4}]},options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // 逾期分布
+  new Chart(document.getElementById("chartOverdue"),{type:"bar",data:{labels:d.overdue_bins.labels,datasets:[{label:"逾期人数",data:d.overdue_bins.data,backgroundColor:["#ffcdd2","#ef9a9a","#e57373","#ef5350"],borderColor:["#e74c3c","#e74c3c","#c62828","#c62828"],borderWidth:2,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // 出版社横向
+  new Chart(document.getElementById("chartPublisher"),{type:"bar",data:{labels:d.publishers.labels,datasets:[{label:"图书数",data:d.publishers.data,backgroundColor:COLORS_ALPHA,borderColor:COLORS,borderWidth:2,borderRadius:4}]},options:{responsive:true,indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // 班级圆环
+  new Chart(document.getElementById("chartClass"),{type:"polarArea",data:{labels:d.classes.labels,datasets:[{data:d.classes.data,backgroundColor:COLORS_ALPHA,borderColor:COLORS,borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
+}
+init();
+</script>
+</body>
+</html>
