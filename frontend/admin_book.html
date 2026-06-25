@@ -22,7 +22,7 @@
           <option value="">全部分类</option><option value="文学">文学</option><option value="科技">科技</option>
           <option value="历史">历史</option><option value="教育">教育</option><option value="计算机">计算机</option><option value="其他">其他</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="searchBooks()">搜索</button>
+        <button class="btn btn-primary btn-sm" onclick="searchBooks()">搜索</button><button class="btn btn-outline btn-sm" onclick="exportBooksCSV()">📥 导出CSV</button>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 新增图书</button>
     </div>
@@ -77,6 +77,8 @@ const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("admin");
+var allBooksData = [];
+var allBooksData = [];
 let currentPage = 1;
 
 function searchBooks(page=1) {
@@ -87,6 +89,7 @@ function searchBooks(page=1) {
   if(kw) url+=`&keyword=${encodeURIComponent(kw)}`;
   if(cat) url+=`&category=${encodeURIComponent(cat)}`;
   apiGet(url).then(data=>{
+  allBooksData = (data.items || []);
     if(!data) return;
     const tbody=document.getElementById("book-tbody");
     const empty=document.getElementById("empty-state");
@@ -116,6 +119,7 @@ function searchBooks(page=1) {
 async function viewDetail(id) {
   const data = await apiGet(`/api/admin/books/${id}`);
   if (!data) return;
+      allBooksData = (data.items || []);
   document.getElementById("detail-content").innerHTML = `
     <h3>${data.book_name}</h3>
     <table style="margin-top:12px;">
@@ -181,6 +185,12 @@ function confirmDelete(id,name) {
 }
 
 searchBooks();
+
+function exportBooksCSV() {
+    if (!allBooksData.length) { alert("暂无数据可导出"); return; }
+    exportCSV("图书列表", ["ID","书名","作者","分类","ISBN","出版社","库存","借阅次数","入库时间"],
+        allBooksData.map(function(b){ return [b.id,b.book_name,b.author,b.category||"",b.isbn||"",b.publisher||"",b.stock,b.total_borrows||0,(b.create_time||"").slice(0,10)]; }));
+}
 </script>
 </body>
 </html>

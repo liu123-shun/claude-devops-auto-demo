@@ -31,7 +31,8 @@
         <input type="text" id="search-input" placeholder="🔍 搜索书名或学生...">
         <button class="btn btn-primary btn-sm" onclick="loadLogs()">搜索</button>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="exportLogs()">📥 导出文本日志</button>
+      <button class="btn btn-outline btn-sm" onclick="exportBorrowLogsCSV()">📥 导出CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="exportLogs()">📥 导出文本</button>
     </div>
 
     <div class="table-wrap">
@@ -84,6 +85,12 @@ function loadLogs(page = 1) {
     }
     renderPagination("pagination", data.page, data.total_pages, loadLogs);
   });
+}
+
+function exportBorrowLogsCSV() {
+  if (!allLogsCache.length) { alert("暂无数据可导出"); return; }
+  exportCSV("借阅操作日志", ["ID","借阅记录ID","操作类型","图书","学生","操作时间"],
+    allLogsCache.map(function(l){ return [l.id,l.borrow_record_id,l.operate_type==="borrow"?"借书":"还书",l.book_name||"",l.student_name||"",(l.operate_time||"").replace("T"," ").slice(0,19)]; }));
 }
 
 function exportLogs() {

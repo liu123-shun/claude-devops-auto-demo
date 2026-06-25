@@ -27,7 +27,7 @@
       <span style="color:#6b8299;font-size:13px;">至</span>
       <input type="date" id="filter-date-to" title="登录时间 至">
       <button class="btn btn-primary btn-sm" onclick="loadLogs()">筛选</button>
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('filter-date-from').value='';document.getElementById('filter-date-to').value='';loadLogs();">清除</button>
+      <button class="btn btn-outline btn-sm" onclick="exportMyLoginLogsCSV()">📥 导出CSV</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('filter-date-from').value='';document.getElementById('filter-date-to').value='';loadLogs();">清除</button>
     </div>
 
     <div class="table-wrap">
@@ -49,11 +49,14 @@ const user = checkAuth();
 if (!user || user.role !== "student") { alert("仅学生可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("student");
+var allMyLoginLogsData = [];
+var allMyLoginLogsData = [];
 
 function loadLogs(page = 1) {
   const dateFrom = document.getElementById("filter-date-from").value;
   const dateTo = document.getElementById("filter-date-to").value;
   apiGet(`/api/student/login-logs?page=${page}&page_size=10`).then(data => {
+  allMyLoginLogsData = (data.items || []);
     if (!data) return;
     let items = data.items || [];
     if (dateFrom) {
@@ -82,6 +85,12 @@ function loadLogs(page = 1) {
 }
 
 loadLogs();
+
+function exportMyLoginLogsCSV() {
+    if (!allMyLoginLogsData.length) { alert("暂无数据可导出"); return; }
+    exportCSV("我的登录日志", ["ID","登录IP","登录时间","退出时间"],
+        allMyLoginLogsData.map(function(l){ return [l.id,l.login_ip||"",(l.login_time||"").replace("T"," ").slice(0,19),(l.logout_time||"").replace("T"," ").slice(0,19)||"在线"]; }));
+}
 </script>
 </body>
 </html>

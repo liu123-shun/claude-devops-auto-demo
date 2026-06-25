@@ -31,7 +31,7 @@
         </select>
         <button class="btn btn-primary btn-sm" onclick="loadBorrows()">筛选</button>
       </div>
-      <button class="btn btn-primary" onclick="openBorrowModal()">＋ 借书</button>
+      <button class="btn btn-primary" onclick="openBorrowModal()">＋ 借书</button><button class="btn btn-outline btn-sm" onclick="exportMyBorrowsCSV()" style="margin-left:8px;">📥 导出CSV</button>
     </div>
 
     <div class="table-wrap">
@@ -78,6 +78,8 @@ const user = checkAuth();
 if (!user || user.role !== "student") { alert("仅学生可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("student");
+var allMyBorrowsData = [];
+var allMyBorrowsData = [];
 
 let availableBooks = [];
 
@@ -88,6 +90,8 @@ function loadBorrows(page = 1) {
   if (status) url += `&status=${encodeURIComponent(status)}`;
 
   apiGet(url).then(data => {
+    allMyBorrowsData = (data.items || []);
+  allMyBorrowsData = (data.items || []);
     if (!data) return;
     const tbody = document.getElementById("borrow-tbody");
     const empty = document.getElementById("empty-state");
@@ -224,6 +228,15 @@ async function submitBorrow() {
 }
 
 loadBorrows();
+
+function exportMyBorrowsCSV() {
+    if (!allMyBorrowsData.length) { alert("暂无数据可导出"); return; }
+    exportCSV("我的借阅", ["ID","图书","借阅时间","归还时间","状态"],
+        allMyBorrowsData.map(function(r){
+            var s = r.status; if (!r.return_time && r.borrow_time) { var d = Math.floor((new Date()-new Date(r.borrow_time))/86400000); if (d>=30) s="逾期"; }
+            return [r.id,r.book_name||"",(r.borrow_time||"").replace("T"," ").slice(0,19),(r.return_time||"").replace("T"," ").slice(0,19)||"未归还",s=="returned"?"已归还":s=="borrowed"?"未归还":"逾期"];
+        }));
+}
 </script>
 </body>
 </html>

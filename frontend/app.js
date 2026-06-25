@@ -207,3 +207,30 @@ function statusTag(status) {
     };
     return map[status] || status;
 }
+
+// ---- CSV 导出工具 ----
+function escapeCSV(val) {
+    if (val === null || val === undefined) return "";
+    var s = String(val).replace(/\n/g, " ").replace(/\r/g, "");
+    if (s.indexOf(",") !== -1 || s.indexOf('"') !== -1 || s.indexOf("\n") !== -1) {
+        s = '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+}
+
+function exportCSV(filename, headers, rows) {
+    var bom = "﻿";
+    var csv = bom + headers.map(escapeCSV).join(",") + "\n";
+    for (var i = 0; i < rows.length; i++) {
+        csv += rows[i].map(escapeCSV).join(",") + "\n";
+    }
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename + "_" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}

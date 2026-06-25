@@ -25,7 +25,7 @@
       <div class="toolbar" style="margin-bottom:0;">
         <input type="text" id="search-input" placeholder="🔍 搜索书名或学生...">
         <button class="btn btn-primary btn-sm" onclick="loadOverdue()">搜索</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('search-input').value='';loadOverdue();">清除</button>
+        <button class="btn btn-outline btn-sm" onclick="exportOverdueCSV()">📥 导出CSV</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('search-input').value='';loadOverdue();">清除</button>
       </div>
       <span style="color:#6b8299;font-size:13px;">筛选条件：借出超过 <strong>30天</strong> 未归还</span>
     </div>
@@ -48,6 +48,8 @@ const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("admin");
+var allOverdueData = [];
+var allOverdueData = [];
 
 function loadOverdue() {
   const keyword = document.getElementById("search-input").value.trim();
@@ -55,6 +57,8 @@ function loadOverdue() {
   if (keyword) url += `?keyword=${encodeURIComponent(keyword)}`;
 
   apiGet(url).then(data => {
+    allOverdueData = data || [];
+  allOverdueData = data || [];
     const tbody = document.getElementById("overdue-tbody");
     const empty = document.getElementById("empty-state");
     if (!data || data.length === 0) {
@@ -91,6 +95,15 @@ async function returnBook(borrowId) {
 }
 
 loadOverdue();
+
+function exportOverdueCSV() {
+    if (!allOverdueData.length) { alert("暂无数据可导出"); return; }
+    exportCSV("逾期图书", ["ID","图书","学生","借阅时间","逾期天数","罚金"],
+        allOverdueData.map(function(r){
+            var days = r.overdue_days || 0;
+            return [r.id,r.book_name||"",r.student_name||"",(r.borrow_time||"").replace("T"," ").slice(0,19),days,days+"元"];
+        }));
+}
 </script>
 </body>
 </html>

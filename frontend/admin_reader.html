@@ -24,7 +24,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <div class="toolbar" style="margin-bottom:0;">
         <input type="text" id="search-input" placeholder="🔍 搜索学生姓名 / 班级...">
-        <button class="btn btn-primary btn-sm" onclick="searchReaders()">搜索</button>
+        <button class="btn btn-primary btn-sm" onclick="searchReaders()">搜索</button><button class="btn btn-outline btn-sm" onclick="exportReadersCSV()">📥 导出CSV</button>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 新增学生</button>
     </div>
@@ -77,6 +77,8 @@ const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("admin");
+var allReadersData = [];
+var allReadersData = [];
 
 let currentPage = 1;
 
@@ -87,7 +89,9 @@ function searchReaders(page = 1) {
   if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
   apiGet(url).then(data => {
+  allReadersData = (data.items || []);
     if (!data) return;
+      allReadersData = (data.items || []);
     const tbody = document.getElementById("reader-tbody");
     const empty = document.getElementById("empty-state");
     if (!data.items || data.items.length === 0) {
@@ -161,6 +165,12 @@ function confirmDelete(id, name) {
 }
 
 searchReaders();
+
+function exportReadersCSV() {
+    if (!allReadersData.length) { alert("暂无数据可导出"); return; }
+    exportCSV("学生列表", ["ID","姓名","班级","手机号","绑定账号ID"],
+        allReadersData.map(function(r){ return [r.id,r.student_name,r.class_||"",r.phone||"",r.bind_user_id||""]; }));
+}
 </script>
 </body>
 </html>

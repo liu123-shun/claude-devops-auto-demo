@@ -27,7 +27,7 @@
       <span style="color:#6b8299;">至</span>
       <input type="date" id="filter-date-to" title="登录时间 至">
       <button class="btn btn-primary btn-sm" onclick="loadLogs()">搜索</button>
-      <button class="btn btn-outline btn-sm" onclick="clearFilters()">清除筛选</button>
+      <button class="btn btn-outline btn-sm" onclick="exportLoginLogsCSV()">📥 导出CSV</button><button class="btn btn-outline btn-sm" onclick="clearFilters()">清除筛选</button>
     </div>
 
     <div class="table-wrap">
@@ -49,6 +49,8 @@ const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("admin");
+var allLoginLogsData = [];
+var allLoginLogsData = [];
 
 function loadLogs(page = 1) {
   const keyword = document.getElementById("search-input").value.trim();
@@ -58,8 +60,10 @@ function loadLogs(page = 1) {
   if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
   apiGet(url).then(data => {
+  allLoginLogsData = (data.items || []);
     if (!data) return;
     let items = data.items || [];
+    allLoginLogsData = (data.items || []);
     // 前端按日期范围过滤
     if (dateFrom) {
       items = items.filter(l => l.login_time && l.login_time >= dateFrom + "T00:00:00");
@@ -97,6 +101,12 @@ function clearFilters() {
 }
 
 loadLogs();
+
+function exportLoginLogsCSV() {
+    if (!allLoginLogsData.length) { alert("暂无数据可导出"); return; }
+    exportCSV("登录日志", ["ID","账号","角色","登录IP","登录时间","退出时间"],
+        allLoginLogsData.map(function(l){ return [l.id,l.username||l.user_id,l.login_role=="admin"?"管理员":"学生",l.login_ip||"",(l.login_time||"").replace("T"," ").slice(0,19),(l.logout_time||"").replace("T"," ").slice(0,19)||"在线"]; }));
+}
 </script>
 </body>
 </html>
