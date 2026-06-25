@@ -56,6 +56,50 @@ def my_profile(
     }
 
 
+@router.get("/stats")
+def my_reading_stats(
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """学生个人阅读统计"""
+    reader_id = _get_student_reader_id(db, current_user["user_id"])
+    if reader_id == 0:
+        return {"total_borrows": 0, "active_borrows": 0, "overdue_count": 0, "top_categories": [], "monthly_trend": []}
+
+    total = db.query(BorrowRecord).filter(BorrowRecord.reader_id == reader_id).count()
+    active = db.query(BorrowRecord).filter(
+        BorrowRecord.reader_id == reader_id, BorrowRecord.return_time.is_(None)).count()
+    from datetime import datetime, timedelta
+    threshold = datetime.now() - timedelta(days=30)
+    overdue = db.query(BorrowRecord).filter(
+        BorrowRecord.reader_id == reader_id, BorrowRecord.return_time.is_(None),
+        BorrowRecord.borrow_time < threshold).count()
+
+    # 偏好的分类 Top 5
+    cats = db.query(Book.category, func.count(Book.id)).join(
+        BorrowRecord, BorrowRecord.book_id == Book.id
+    ).filter(
+        BorrowRecord.reader_id == reader_id, Book.category.isnot(None), Book.category != ""
+    ).group_by(Book.category).order_by(func.count(Book.id).desc()).limit(5).all()
+    top_cats = [{"category": c, "count": n} for c, n in cats]
+
+    # 近6个月借阅趋势
+    monthly = []
+    for i in range(5, -1, -1):
+        start = (datetime.now().replace(day=1) - timedelta(days=30 * i)).replace(day=1)
+        end = (start + timedelta(days=32)).replace(day=1)
+        cnt = db.query(BorrowRecord).filter(
+            BorrowRecord.reader_id == reader_id,
+            BorrowRecord.borrow_time >= start, BorrowRecord.borrow_time < end
+        ).count()
+        monthly.append({"month": start.strftime("%Y-%m"), "count": cnt})
+
+    return {
+        "total_borrows": total, "active_borrows": active, "overdue_count": overdue,
+        "top_categories": top_cats, "monthly_trend": monthly,
+    }
+
+
 @router.put("/profile")
 def update_my_profile(
     phone: str = Query(None, max_length=32),

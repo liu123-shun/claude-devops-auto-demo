@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阅读统计 — 学生端</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.category-bar{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.category-bar .cat-label{width:70px;font-size:12px;text-align:right;color:#6b8299;font-weight:600;}
+.category-bar .cat-fill{flex:1;height:22px;background:#e8f0fe;border-radius:5px;overflow:hidden;}
+.category-bar .cat-inner{height:100%;background:linear-gradient(90deg,#4a90d9,#6db3f2);border-radius:5px;transition:width .5s;display:flex;align-items:center;padding-left:8px;}
+.category-bar .cat-count{font-size:11px;color:#fff;font-weight:600;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:16px;}
+.stats-item{background:#f8fafd;border-radius:10px;padding:16px;text-align:center;}
+.stats-item .num{font-size:28px;font-weight:700;color:#4a90d9;}
+.stats-item .lbl{font-size:12px;color:#6b8299;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 学生端</div>
+  <div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div>
+</div>
+<div class="sidebar">
+  <div class="nav-group"><div class="nav-label">主菜单</div>
+    <a href="student_index.html"><span class="icon">📊</span><span>我的首页</span></a>
+    <a href="student_books.html"><span class="icon">📚</span><span>馆藏浏览</span></a></div>
+  <div class="nav-group"><div class="nav-label">我的记录</div>
+    <a href="student_my_borrow.html"><span class="icon">📖</span><span>我的借阅</span></a>
+    <a href="student_stats.html" class="active"><span class="icon">📈</span><span>阅读统计</span></a>
+    <a href="student_my_login_log.html"><span class="icon">📝</span><span>登录日志</span></a></div>
+</div>
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 阅读统计</div>
+
+  <div id="stats-container"></div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user=checkAuth();
+if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
+displayUserInfo();
+
+async function init(){
+  const s=await apiGet("/api/student/stats");
+  if(!s)return;
+
+  // 分类偏好
+  const maxC=Math.max(...s.top_categories.map(c=>c.count),1);
+  let catsHtml=s.top_categories.length?s.top_categories.map(c=>`
+    <div class="category-bar">
+      <span class="cat-label">${c.category}</span>
+      <div class="cat-fill"><div class="cat-inner" style="width:${(c.count/maxC*100).toFixed(0)}%;"><span class="cat-count">${c.count}本</span></div></div>
+    </div>`).join(""):'<span style="color:#999;">暂无借阅数据</span>';
+
+  // 月度趋势
+  const trend=s.monthly_trend||[];
+  const maxT=Math.max(...trend.map(t=>t.count),1);
+  let trendHtml=trend.length?`<div style="display:flex;align-items:end;gap:6px;height:100px;padding-top:8px;">${trend.map(t=>`
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+      <span style="font-size:11px;font-weight:600;color:#4a90d9;">${t.count}</span>
+      <div style="width:100%;background:linear-gradient(180deg,#4a90d9,#6db3f2);border-radius:3px 3px 0 0;height:${Math.max(t.count/maxT*70,2)}px;"></div>
+      <span style="font-size:10px;color:#999;margin-top:4px;">${t.month.slice(5)}月</span>
+    </div>`).join("")}</div>`:'';
+
+  document.getElementById("stats-container").innerHTML=`
+    <div class="stats-grid">
+      <div class="stats-item"><div class="num">${s.total_borrows}</div><div class="lbl">📚 累计借阅</div></div>
+      <div class="stats-item"><div class="num" style="color:#f39c12;">${s.active_borrows}</div><div class="lbl">📖 当前在借</div></div>
+      <div class="stats-item"><div class="num" style="color:#e74c3c;">${s.overdue_count}</div><div class="lbl">⚠️ 逾期数</div></div>
+      <div class="stats-item"><div class="num">${s.total_borrows-s.active_borrows}</div><div class="lbl">✅ 已归还</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="card">
+        <div class="card-title">📂 阅读偏好分类</div>
+        ${catsHtml}
+      </div>
+      <div class="card">
+        <div class="card-title">📈 近6月借阅趋势</div>
+        ${trendHtml||'<span style="color:#999;">暂无数据</span>'}
+      </div>
+    </div>
+  `;
+}
+init();
+</script>
+</body>
+</html>
