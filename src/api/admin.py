@@ -142,9 +142,20 @@ def return_book(borrow_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/overdue")
-def overdue_books(db: Session = Depends(get_db)):
-    """查询逾期图书"""
-    return borrow_service.get_overdue_borrows(db)
+def overdue_books(
+    keyword: str = Query(None, description="搜索书名或学生姓名"),
+    db: Session = Depends(get_db),
+):
+    """查询逾期图书，支持按书名/学生姓名筛选"""
+    items = borrow_service.get_overdue_borrows(db)
+    if keyword:
+        kw = keyword.lower()
+        items = [
+            i for i in items
+            if (i.get("book_name") and kw in i["book_name"].lower())
+            or (i.get("student_name") and kw in i["student_name"].lower())
+        ]
+    return items
 
 
 # ==================== 日志查询 ====================
@@ -182,11 +193,12 @@ def list_login_logs(
 @router.get("/borrow-logs")
 def list_borrow_operation_logs(
     operate_type: str = Query(None),
+    keyword: str = Query(None, description="搜索书名或学生姓名"),
     page: int = Query(1, ge=1),
     page_size: int = Query(PAGE_SIZE, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """全局借阅操作日志"""
+    """全局借阅操作日志，支持按操作类型+关键词筛选"""
     logs, total = borrow_log_dao.list_borrow_logs(db, operate_type, (page - 1) * page_size, page_size)
     items = []
     for log in logs:
@@ -207,10 +219,18 @@ def list_borrow_operation_logs(
             "book_name": book_name,
             "student_name": student_name,
         })
+    # 关键词筛选
+    if keyword:
+        kw = keyword.lower()
+        items = [
+            i for i in items
+            if (i.get("book_name") and kw in i["book_name"].lower())
+            or (i.get("student_name") and kw in i["student_name"].lower())
+        ]
     return {
         "items": items,
-        "total": total,
+        "total": len(items),
         "page": page,
         "page_size": page_size,
-        "total_pages": (total + page_size - 1) // page_size if total else 0,
+        "total_pages": (len(items) + page_size - 1) // page_size if items else 0,
     }

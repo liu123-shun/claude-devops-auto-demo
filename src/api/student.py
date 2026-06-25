@@ -2,20 +2,21 @@
 学生专属接口
 ===========
 - 查看自身信息
-- 查看自己的借阅记录
 - 查看可借图书列表
 - 借书操作（仅限给自己借）
-- 查看自己的登录日志
+- 还书操作（仅限还自己的）
+- 查看借阅记录（支持状态筛选）
+- 查看登录日志
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ..db.database import get_db
-from ..schemas.borrow import BorrowCreate, BorrowResponse
+from ..schemas.borrow import BorrowCreate
 from ..service import borrow_service
-from ..dao import login_log_dao, reader_dao, book_dao
-from ..common.dependencies import require_student, get_current_user
+from ..dao import login_log_dao, reader_dao, book_dao, borrow_dao
+from ..common.dependencies import require_student
 from ..config.settings import PAGE_SIZE
 
 router = APIRouter(prefix="/api/student", tags=["学生"])
@@ -83,11 +84,12 @@ def student_dashboard(
 
 @router.get("/books")
 def list_available_books(
+    keyword: str = Query(None, description="搜索书名或作者"),
     current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
-    """获取所有库存 > 0 的图书列表（供学生借书下拉选择）"""
-    books, _ = book_dao.list_books(db, keyword=None, category=None, skip=0, limit=1000)
+    """获取图书列表（供学生借书下拉选择），支持关键词搜索"""
+    books, _ = book_dao.list_books(db, keyword=keyword, category=None, skip=0, limit=200)
     result = []
     for b in books:
         result.append({
@@ -104,16 +106,17 @@ def list_available_books(
 
 @router.get("/borrows")
 def my_borrows(
+    status: str = Query(None, description="筛选状态: borrowed / returned / overdue"),
     current_user: dict = Depends(require_student),
     page: int = Query(1, ge=1),
     page_size: int = Query(PAGE_SIZE, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """仅查看当前学生的借阅记录"""
+    """仅查看当前学生的借阅记录，支持按状态筛选"""
     reader_id = _get_student_reader_id(db, current_user["user_id"])
     if reader_id == 0:
         return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 0}
-    return borrow_service.get_borrow_records(db, reader_id=reader_id, page=page, page_size=page_size)
+    return borrow_service.get_borrow_records(db, reader_id=reader_id, status=status, page=page, page_size=page_size)
 
 
 @router.post("/borrows", status_code=status.HTTP_201_CREATED)
@@ -133,7 +136,6 @@ def student_borrow_book(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="当前学生尚未绑定读者信息，请联系管理员",
         )
-    # 仅允许给自己借，不允许代借
     if body.reader_id and body.reader_id != reader_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -144,7 +146,6 @@ def student_borrow_book(
     if not record:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="借书失败")
 
-    # 补全图书名返回
     book = book_dao.get_book_by_id(db, record.book_id)
     return {
         "id": record.id,
@@ -153,6 +154,45 @@ def student_borrow_book(
         "borrow_time": record.borrow_time.isoformat() if record.borrow_time else None,
         "status": record.status,
         "book_name": book.book_name if book else None,
+    }
+
+
+@router.put("/borrows/{borrow_id}/return")
+def student_return_book(
+    borrow_id: int,
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """
+    学生还书：仅允许归还自己的借阅记录。
+    归还后触发器自动写操作日志+库存+1。
+    """
+    reader_id = _get_student_reader_id(db, current_user["user_id"])
+    if reader_id == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="当前学生尚未绑定读者信息",
+        )
+
+    # 查询借阅记录，校验所有权
+    record = borrow_dao.get_borrow_by_id(db, borrow_id)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="借阅记录不存在")
+    if record.reader_id != reader_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只能归还自己的借阅记录",
+        )
+
+    updated = borrow_service.return_book(db, borrow_id)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="还书失败")
+    return {
+        "id": updated.id,
+        "book_id": updated.book_id,
+        "reader_id": updated.reader_id,
+        "return_time": updated.return_time.isoformat() if updated.return_time else None,
+        "status": updated.status,
     }
 
 

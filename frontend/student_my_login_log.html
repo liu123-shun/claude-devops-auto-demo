@@ -28,7 +28,15 @@
   <div class="breadcrumb">🏠 学生首页 / 我的登录日志</div>
 
   <div class="card">
-    <div class="card-title">📝 我的登录日志</div>
+    <div class="toolbar" style="flex-wrap:wrap;">
+      <div class="card-title" style="margin-bottom:0;">📝 我的登录日志</div>
+      <input type="date" id="filter-date-from" title="登录时间 从">
+      <span style="color:#6b8299;font-size:13px;">至</span>
+      <input type="date" id="filter-date-to" title="登录时间 至">
+      <button class="btn btn-primary btn-sm" onclick="loadLogs()">筛选</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('filter-date-from').value='';document.getElementById('filter-date-to').value='';loadLogs();">清除</button>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
@@ -49,15 +57,24 @@ if (!user || user.role !== "student") { alert("仅学生可访问"); window.loca
 displayUserInfo();
 
 function loadLogs(page = 1) {
+  const dateFrom = document.getElementById("filter-date-from").value;
+  const dateTo = document.getElementById("filter-date-to").value;
   apiGet(`/api/student/login-logs?page=${page}&page_size=10`).then(data => {
     if (!data) return;
+    let items = data.items || [];
+    if (dateFrom) {
+      items = items.filter(l => l.login_time && l.login_time >= dateFrom + "T00:00:00");
+    }
+    if (dateTo) {
+      items = items.filter(l => l.login_time && l.login_time <= dateTo + "T23:59:59");
+    }
     const tbody = document.getElementById("log-tbody");
     const empty = document.getElementById("empty-state");
-    if (!data.items || data.items.length === 0) {
+    if (items.length === 0) {
       tbody.innerHTML = ""; empty.style.display = "block";
     } else {
       empty.style.display = "none";
-      tbody.innerHTML = data.items.map(l => `
+      tbody.innerHTML = items.map(l => `
         <tr>
           <td>${l.id}</td>
           <td>${l.login_ip || "-"}</td>
@@ -65,7 +82,8 @@ function loadLogs(page = 1) {
           <td>${l.logout_time ? l.logout_time.replace("T"," ").slice(0,19) : '<span class="tag tag-yellow">在线</span>'}</td>
         </tr>`).join("");
     }
-    renderPagination("pagination", data.page, data.total_pages, loadLogs);
+    const totalPages = Math.ceil(items.length / 10) || 0;
+    renderPagination("pagination", page, totalPages, loadLogs);
   });
 }
 

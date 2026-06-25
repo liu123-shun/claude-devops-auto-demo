@@ -32,9 +32,13 @@
   <div class="breadcrumb">🏠 首页 / 全局登录日志</div>
 
   <div class="card">
-    <div class="toolbar">
+    <div class="toolbar" style="flex-wrap:wrap;">
       <input type="text" id="search-input" placeholder="🔍 按账号搜索...">
+      <input type="date" id="filter-date-from" title="登录时间 从">
+      <span style="color:#6b8299;">至</span>
+      <input type="date" id="filter-date-to" title="登录时间 至">
       <button class="btn btn-primary btn-sm" onclick="loadLogs()">搜索</button>
+      <button class="btn btn-outline btn-sm" onclick="clearFilters()">清除筛选</button>
     </div>
 
     <div class="table-wrap">
@@ -58,18 +62,28 @@ displayUserInfo();
 
 function loadLogs(page = 1) {
   const keyword = document.getElementById("search-input").value.trim();
+  const dateFrom = document.getElementById("filter-date-from").value;
+  const dateTo = document.getElementById("filter-date-to").value;
   let url = `/api/admin/login-logs?page=${page}&page_size=10`;
   if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
   apiGet(url).then(data => {
     if (!data) return;
+    let items = data.items || [];
+    // 前端按日期范围过滤
+    if (dateFrom) {
+      items = items.filter(l => l.login_time && l.login_time >= dateFrom + "T00:00:00");
+    }
+    if (dateTo) {
+      items = items.filter(l => l.login_time && l.login_time <= dateTo + "T23:59:59");
+    }
     const tbody = document.getElementById("log-tbody");
     const empty = document.getElementById("empty-state");
-    if (!data.items || data.items.length === 0) {
+    if (items.length === 0) {
       tbody.innerHTML = ""; empty.style.display = "block";
     } else {
       empty.style.display = "none";
-      tbody.innerHTML = data.items.map(l => `
+      tbody.innerHTML = items.map(l => `
         <tr>
           <td>${l.id}</td>
           <td><strong>${l.username || l.user_id}</strong></td>
@@ -79,8 +93,17 @@ function loadLogs(page = 1) {
           <td>${l.logout_time ? l.logout_time.replace("T"," ").slice(0,19) : '<span class="tag tag-yellow">在线</span>'}</td>
         </tr>`).join("");
     }
-    renderPagination("pagination", data.page, data.total_pages, loadLogs);
+    // 分页适配过滤后的数据
+    const totalPages = Math.ceil(items.length / 10) || 0;
+    renderPagination("pagination", page, totalPages, loadLogs);
   });
+}
+
+function clearFilters() {
+  document.getElementById("search-input").value = "";
+  document.getElementById("filter-date-from").value = "";
+  document.getElementById("filter-date-to").value = "";
+  loadLogs();
 }
 
 loadLogs();

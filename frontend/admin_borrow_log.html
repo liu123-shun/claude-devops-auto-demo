@@ -32,14 +32,15 @@
   <div class="breadcrumb">🏠 首页 / 全局借阅操作日志</div>
 
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
       <div class="toolbar" style="margin-bottom:0;">
         <select id="filter-type">
           <option value="">全部操作</option>
           <option value="borrow">借书</option>
           <option value="return">还书</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="loadLogs()">筛选</button>
+        <input type="text" id="search-input" placeholder="🔍 搜索书名或学生...">
+        <button class="btn btn-primary btn-sm" onclick="loadLogs()">搜索</button>
       </div>
       <button class="btn btn-outline btn-sm" onclick="exportLogs()">📥 导出文本日志</button>
     </div>
@@ -67,8 +68,10 @@ let allLogsCache = [];
 
 function loadLogs(page = 1) {
   const type = document.getElementById("filter-type").value;
+  const keyword = document.getElementById("search-input").value.trim();
   let url = `/api/admin/borrow-logs?page=${page}&page_size=10`;
   if (type) url += `&operate_type=${type}`;
+  if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
   apiGet(url).then(data => {
     if (!data) return;
