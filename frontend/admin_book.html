@@ -7,72 +7,56 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <div class="topbar">
   <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
-  <div class="user-info">
-    <span>👤 <span id="display-name">管理员</span></span>
-    <button onclick="logout()">退出登录</button>
-  </div>
+  <div class="user-info"><span>👤 <span id="display-name">管理员</span></span><button onclick="logout()">退出登录</button></div>
 </div>
-
 <div class="sidebar">
-  <div class="nav-group"><div class="nav-label">主菜单</div>
-    <a href="admin_index.html"><span class="icon">📊</span><span>首页看板</span></a></div>
+  <div class="nav-group"><div class="nav-label">主菜单</div><a href="admin_index.html"><span class="icon">📊</span><span>首页看板</span></a></div>
   <div class="nav-group"><div class="nav-label">业务管理</div>
     <a href="admin_book.html" class="active"><span class="icon">📖</span><span>图书管理</span></a>
-    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a></div>
+    <a href="admin_reader.html"><span class="icon">👨‍🎓</span><span>学生管理</span></a>
+    <a href="admin_announcement.html"><span class="icon">📢</span><span>公告管理</span></a></div>
   <div class="nav-group"><div class="nav-label">日志审计</div>
     <a href="admin_login_log.html"><span class="icon">📝</span><span>登录日志</span></a>
-    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅操作日志</span></a>
+    <a href="admin_borrow_log.html"><span class="icon">📋</span><span>借阅日志</span></a>
     <a href="admin_overdue.html"><span class="icon">⚠️</span><span>逾期图书</span></a></div>
 </div>
-
 <div class="main-content">
   <div class="breadcrumb">🏠 首页 / 图书管理</div>
-
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <div class="toolbar" style="margin-bottom:0;">
-        <input type="text" id="search-input" placeholder="🔍 搜索书名 / 作者...">
+        <input type="text" id="search-input" placeholder="🔍 搜索书名/作者/ISBN...">
         <select id="filter-category">
-          <option value="">全部分类</option>
-          <option value="文学">文学</option><option value="科技">科技</option>
-          <option value="历史">历史</option><option value="教育">教育</option>
-          <option value="计算机">计算机</option><option value="其他">其他</option>
+          <option value="">全部分类</option><option value="文学">文学</option><option value="科技">科技</option>
+          <option value="历史">历史</option><option value="教育">教育</option><option value="计算机">计算机</option><option value="其他">其他</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="searchBooks()">搜索</button>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 新增图书</button>
     </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>ID</th><th>书名</th><th>作者</th><th>分类</th><th>库存</th><th>入库时间</th><th>操作</th></tr>
-        </thead>
-        <tbody id="book-tbody"></tbody>
-      </table>
-    </div>
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>书名</th><th>作者</th><th>分类</th><th>ISBN</th><th>库存</th><th>借阅</th><th>操作</th></tr></thead><tbody id="book-tbody"></tbody></table></div>
     <div id="empty-state" class="empty-state" style="display:none;">暂无图书数据</div>
     <div class="pagination" id="pagination"></div>
   </div>
 </div>
 
-<!-- 新增/编辑弹窗 -->
 <div class="modal-overlay" id="book-modal">
-  <div class="modal">
+  <div class="modal" style="width:560px;">
     <div class="modal-header"><span id="modal-title">新增图书</span><button class="modal-close" onclick="closeModal('book-modal')">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="edit-id">
-      <div class="form-group"><label>书名 *</label><input type="text" id="f-book-name" placeholder="请输入书名"></div>
-      <div class="form-group"><label>作者 *</label><input type="text" id="f-author" placeholder="请输入作者"></div>
-      <div class="form-group"><label>分类</label>
-        <select id="f-category">
-          <option value="">请选择</option><option value="文学">文学</option><option value="科技">科技</option>
-          <option value="历史">历史</option><option value="教育">教育</option><option value="计算机">计算机</option><option value="其他">其他</option>
-        </select></div>
-      <div class="form-group"><label>库存 *</label><input type="number" id="f-stock" value="0" min="0"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;">
+        <div class="form-group"><label>书名 *</label><input type="text" id="f-book-name"></div>
+        <div class="form-group"><label>作者 *</label><input type="text" id="f-author"></div>
+        <div class="form-group"><label>分类</label><select id="f-category"><option value="">请选择</option><option value="文学">文学</option><option value="科技">科技</option><option value="历史">历史</option><option value="教育">教育</option><option value="计算机">计算机</option><option value="其他">其他</option></select></div>
+        <div class="form-group"><label>ISBN</label><input type="text" id="f-isbn"></div>
+        <div class="form-group"><label>出版社</label><input type="text" id="f-publisher"></div>
+        <div class="form-group"><label>库存 *</label><input type="number" id="f-stock" value="1" min="0"></div>
+      </div>
+      <div class="form-group"><label>封面图片URL</label><input type="text" id="f-cover" placeholder="可选，粘贴图片链接"></div>
+      <div class="form-group"><label>简介</label><textarea id="f-desc" rows="2" style="width:100%;border:1px solid #dce3ea;border-radius:8px;padding:8px;font-size:13px;"></textarea></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('book-modal')">取消</button>
@@ -81,15 +65,19 @@
   </div>
 </div>
 
-<!-- 删除确认弹窗 -->
+<!-- 图书详情弹窗 -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="width:600px;max-height:85vh;">
+    <div class="modal-header">📖 图书详情<button class="modal-close" onclick="closeModal('detail-modal')">&times;</button></div>
+    <div class="modal-body" id="detail-content"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
-    <div class="modal-header">⚠️ 确认删除<span class="modal-close" onclick="closeModal('delete-modal')">&times;</span></div>
-    <div class="modal-body"><p>确定要删除图书 <strong id="del-book-name"></strong> 吗？此操作不可撤销。</p></div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('delete-modal')">取消</button>
-      <button class="btn btn-danger" id="del-confirm-btn">确认删除</button>
-    </div>
+    <div class="modal-header">⚠️ 确认删除<button class="modal-close" onclick="closeModal('delete-modal')">&times;</button></div>
+    <div class="modal-body"><p>确定要删除图书 <strong id="del-book-name"></strong> ?</p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('delete-modal')">取消</button><button class="btn btn-danger" id="del-confirm-btn">确认删除</button></div>
   </div>
 </div>
 
@@ -98,93 +86,106 @@
 const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
-
 let currentPage = 1;
 
-function searchBooks(page = 1) {
-  currentPage = page;
-  const keyword = document.getElementById("search-input").value.trim();
-  const category = document.getElementById("filter-category").value;
-  let url = `/api/admin/books?page=${page}&page_size=10`;
-  if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
-  if (category) url += `&category=${encodeURIComponent(category)}`;
-
-  apiGet(url).then(data => {
-    if (!data) return;
-    const tbody = document.getElementById("book-tbody");
-    const empty = document.getElementById("empty-state");
-    if (!data.items || data.items.length === 0) {
-      tbody.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      tbody.innerHTML = data.items.map(b => `
-        <tr style="${b.stock <= 0 ? 'opacity:0.45;background:#f5f5f5;' : ''}">
+function searchBooks(page=1) {
+  currentPage=page;
+  const kw=document.getElementById("search-input").value.trim();
+  const cat=document.getElementById("filter-category").value;
+  let url=`/api/admin/books?page=${page}&page_size=10`;
+  if(kw) url+=`&keyword=${encodeURIComponent(kw)}`;
+  if(cat) url+=`&category=${encodeURIComponent(cat)}`;
+  apiGet(url).then(data=>{
+    if(!data) return;
+    const tbody=document.getElementById("book-tbody");
+    const empty=document.getElementById("empty-state");
+    if(!data.items||data.items.length===0){tbody.innerHTML="";empty.style.display="block";}
+    else{
+      empty.style.display="none";
+      tbody.innerHTML=data.items.map(b=>`
+        <tr style="${b.stock<=0?'opacity:0.45;background:#f5f5f5;':''}">
           <td>${b.id}</td>
-          <td><strong>${b.book_name}</strong>${b.stock <= 0 ? ' <span class="tag tag-red">已借完</span>' : ''}</td>
+          <td><strong>${b.book_name}</strong>${b.stock<=0?' <span class="tag tag-red">已借完</span>':''}</td>
           <td>${b.author}</td>
-          <td>${b.category || "-"}</td>
-          <td><span style="color:${b.stock <= 0 ? '#aaa' : b.stock <= 3 ? '#e74c3c' : '#27ae60'};font-weight:700;">${b.stock}</span></td>
-          <td>${b.create_time ? b.create_time.slice(0,10) : "-"}</td>
+          <td>${b.category||"-"}</td>
+          <td style="font-size:11px;">${b.isbn||"-"}</td>
+          <td><span style="color:${b.stock<=0?'#aaa':b.stock<=3?'#e74c3c':'#27ae60'};font-weight:700;">${b.stock}</span></td>
+          <td style="font-size:12px;">${b.total_borrows||0}次</td>
           <td>
+            <button class="btn btn-outline btn-sm" onclick='viewDetail(${b.id})'>详情</button>
             <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(b).replace(/'/g,"&#39;")})'>编辑</button>
             <button class="btn btn-danger btn-sm" onclick='confirmDelete(${b.id},"${b.book_name}")'>删除</button>
           </td>
         </tr>`).join("");
     }
-    renderPagination("pagination", data.page, data.total_pages, searchBooks);
+    renderPagination("pagination",data.page,data.total_pages,searchBooks);
   });
 }
 
+async function viewDetail(id) {
+  const data = await apiGet(`/api/admin/books/${id}`);
+  if (!data) return;
+  document.getElementById("detail-content").innerHTML = `
+    <h3>${data.book_name}</h3>
+    <table style="margin-top:12px;">
+      <tr><td style="color:#6b8299;width:80px;">作者</td><td>${data.author}</td></tr>
+      <tr><td style="color:#6b8299;">分类</td><td>${data.category||"-"}</td></tr>
+      <tr><td style="color:#6b8299;">ISBN</td><td>${data.isbn||"-"}</td></tr>
+      <tr><td style="color:#6b8299;">出版社</td><td>${data.publisher||"-"}</td></tr>
+      <tr><td style="color:#6b8299;">库存</td><td><strong>${data.stock}</strong></td></tr>
+      <tr><td style="color:#6b8299;">累计借阅</td><td>${data.total_borrows} 次</td></tr>
+      <tr><td style="color:#6b8299;">入库时间</td><td>${(data.create_time||"").slice(0,10)}</td></tr>
+    </table>
+    ${data.description?`<p style="margin-top:12px;color:#555;font-size:13px;">📝 ${data.description}</p>`:''}
+    ${data.cover_url?`<img src="${data.cover_url}" style="max-width:120px;margin-top:8px;border-radius:6px;" onerror="this.style.display='none'">`:''}
+    <div style="margin-top:16px;"><strong>最近借阅记录</strong></div>
+    <div style="font-size:12px;margin-top:6px;">${(data.recent_records||[]).map(r=>`<div style="padding:4px 0;border-bottom:1px solid #f0f0f0;">${r.student_name||"-"} ${r.status==='returned'?'归还':'借阅'} · ${(r.borrow_time||"").replace("T"," ").slice(0,16)}</div>`).join("")||'<span style="color:#999;">暂无</span>'}</div>
+  `;
+  openModal("detail-modal");
+}
+
 function openAddModal() {
-  document.getElementById("modal-title").textContent = "新增图书";
-  document.getElementById("edit-id").value = "";
-  document.getElementById("f-book-name").value = "";
-  document.getElementById("f-author").value = "";
-  document.getElementById("f-category").value = "";
-  document.getElementById("f-stock").value = "1";
+  document.getElementById("modal-title").textContent="新增图书";
+  ["edit-id","f-book-name","f-author","f-isbn","f-publisher","f-cover","f-desc"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("f-category").value="";
+  document.getElementById("f-stock").value="1";
   openModal("book-modal");
 }
 
-function openEditModal(book) {
-  document.getElementById("modal-title").textContent = "编辑图书";
-  document.getElementById("edit-id").value = book.id;
-  document.getElementById("f-book-name").value = book.book_name;
-  document.getElementById("f-author").value = book.author;
-  document.getElementById("f-category").value = book.category || "";
-  document.getElementById("f-stock").value = book.stock;
+function openEditModal(b) {
+  document.getElementById("modal-title").textContent="编辑图书";
+  document.getElementById("edit-id").value=b.id;
+  document.getElementById("f-book-name").value=b.book_name;
+  document.getElementById("f-author").value=b.author;
+  document.getElementById("f-category").value=b.category||"";
+  document.getElementById("f-isbn").value=b.isbn||"";
+  document.getElementById("f-publisher").value=b.publisher||"";
+  document.getElementById("f-cover").value=b.cover_url||"";
+  document.getElementById("f-desc").value=b.description||"";
+  document.getElementById("f-stock").value=b.stock;
   openModal("book-modal");
 }
 
 async function saveBook() {
-  const id = document.getElementById("edit-id").value;
-  const data = {
-    book_name: document.getElementById("f-book-name").value.trim(),
-    author: document.getElementById("f-author").value.trim(),
-    category: document.getElementById("f-category").value || null,
-    stock: parseInt(document.getElementById("f-stock").value) || 0,
+  const id=document.getElementById("edit-id").value;
+  const data={
+    book_name:document.getElementById("f-book-name").value.trim(),
+    author:document.getElementById("f-author").value.trim(),
+    category:document.getElementById("f-category").value||null,
+    isbn:document.getElementById("f-isbn").value.trim()||null,
+    publisher:document.getElementById("f-publisher").value.trim()||null,
+    description:document.getElementById("f-desc").value.trim()||null,
+    cover_url:document.getElementById("f-cover").value.trim()||null,
+    stock:parseInt(document.getElementById("f-stock").value)||0,
   };
-  if (!data.book_name || !data.author) { alert("书名和作者不能为空"); return; }
-
-  let result;
-  if (id) {
-    result = await apiPut(`/api/admin/books/${id}`, data);
-  } else {
-    result = await apiPost("/api/admin/books", data);
-  }
-  if (result && result.id) {
-    closeModal("book-modal");
-    searchBooks(currentPage);
-  }
+  if(!data.book_name||!data.author){alert("书名和作者不能为空");return;}
+  let result = id? await apiPut(`/api/admin/books/${id}`,data) : await apiPost("/api/admin/books",data);
+  if(result&&result.id){closeModal("book-modal");searchBooks(currentPage);}
 }
 
-function confirmDelete(id, name) {
-  document.getElementById("del-book-name").textContent = name;
-  document.getElementById("del-confirm-btn").onclick = async () => {
-    await apiDelete(`/api/admin/books/${id}`);
-    closeModal("delete-modal");
-    searchBooks(currentPage);
-  };
+function confirmDelete(id,name) {
+  document.getElementById("del-book-name").textContent=name;
+  document.getElementById("del-confirm-btn").onclick=async()=>{await apiDelete(`/api/admin/books/${id}`);closeModal("delete-modal");searchBooks(currentPage);};
   openModal("delete-modal");
 }
 

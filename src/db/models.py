@@ -1,12 +1,12 @@
 """
-数据库表模型（共6张表）
+数据库表模型（共7张表）
 ======================
 使用 SQLAlchemy ORM 定义全部业务表结构。
 """
 
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, ForeignKey, Enum as SAEnum,
+    Column, Integer, String, Text, DateTime, ForeignKey,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -25,7 +25,6 @@ class SysUser(Base):
     phone = Column(String(32), nullable=True, comment="手机号")
     create_time = Column(DateTime, default=datetime.now, comment="创建时间")
 
-    # 关联
     reader = relationship("Reader", back_populates="user", uselist=False)
     login_logs = relationship("LoginLog", back_populates="user")
 
@@ -38,8 +37,13 @@ class Book(Base):
     book_name = Column(String(128), nullable=False, comment="书名")
     author = Column(String(64), nullable=False, comment="作者")
     category = Column(String(64), nullable=True, comment="分类")
+    isbn = Column(String(32), nullable=True, comment="ISBN编号")
+    publisher = Column(String(64), nullable=True, comment="出版社")
+    description = Column(Text, nullable=True, comment="图书简介")
+    cover_url = Column(String(512), nullable=True, comment="封面图片URL")
     publish_time = Column(DateTime, nullable=True, comment="出版时间")
     stock = Column(Integer, nullable=False, default=0, comment="库存数量")
+    total_borrows = Column(Integer, nullable=False, default=0, comment="累计借阅次数")
     create_time = Column(DateTime, default=datetime.now, comment="入库时间")
 
 
@@ -91,3 +95,18 @@ class BorrowOperationLog(Base):
     operate_type = Column(String(16), nullable=False, comment="borrow / return")
     operate_time = Column(DateTime, default=datetime.now, comment="操作时间")
     operate_user_id = Column(Integer, nullable=False, comment="操作人ID")
+
+
+class Announcement(Base):
+    """系统公告表"""
+    __tablename__ = "announcement"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(128), nullable=False, comment="公告标题")
+    content = Column(Text, nullable=False, comment="公告内容")
+    publisher_id = Column(Integer, ForeignKey("sys_user.id"), nullable=False, comment="发布人ID")
+    is_pinned = Column(Integer, nullable=False, default=0, comment="是否置顶: 0=否 1=是")
+    create_time = Column(DateTime, default=datetime.now, comment="发布时间")
+    update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment="更新时间")
+
+    publisher = relationship("SysUser")

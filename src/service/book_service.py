@@ -15,6 +15,10 @@ def add_book(
     book_name: str,
     author: str,
     category: Optional[str] = None,
+    isbn: Optional[str] = None,
+    publisher: Optional[str] = None,
+    description: Optional[str] = None,
+    cover_url: Optional[str] = None,
     publish_time=None,
     stock: int = 0,
 ) -> Book:
@@ -23,6 +27,10 @@ def add_book(
         book_name=book_name,
         author=author,
         category=category,
+        isbn=isbn,
+        publisher=publisher,
+        description=description,
+        cover_url=cover_url,
         publish_time=publish_time,
         stock=stock,
     )

@@ -30,7 +30,11 @@ def borrow_book(db: Session, book_id: int, reader_id: int) -> Optional[BorrowRec
         reader_id=reader_id,
         status="borrowed",
     )
-    return borrow_dao.create_borrow(db, record)
+    result = borrow_dao.create_borrow(db, record)
+    # 增加累计借阅次数
+    book.total_borrows = (book.total_borrows or 0) + 1
+    db.commit()
+    return result
 
 
 def return_book(db: Session, borrow_id: int) -> Optional[BorrowRecord]:

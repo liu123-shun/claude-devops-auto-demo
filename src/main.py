@@ -24,12 +24,32 @@ from .common.exception import register_exception_handlers
 FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 
 
+def _migrate_schema(engine):
+    """自动追加新增字段，避免旧数据库缺少列导致报错。"""
+    from sqlalchemy import text, exc as sa_exc
+    migrations = [
+        "ALTER TABLE book ADD COLUMN isbn VARCHAR(32) NULL COMMENT 'ISBN编号'",
+        "ALTER TABLE book ADD COLUMN publisher VARCHAR(64) NULL COMMENT '出版社'",
+        "ALTER TABLE book ADD COLUMN description TEXT NULL COMMENT '图书简介'",
+        "ALTER TABLE book ADD COLUMN cover_url VARCHAR(512) NULL COMMENT '封面图片URL'",
+        "ALTER TABLE book ADD COLUMN total_borrows INT NOT NULL DEFAULT 0 COMMENT '累计借阅次数'",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(text(sql))
+            except sa_exc.OperationalError:
+                pass  # 字段已存在则跳过
+        conn.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动时初始化数据库"""
-    # 创建全部数据表
+    # 创建全部数据表 & 自动迁移新字段
     Base.metadata.create_all(bind=engine)
-    print("[OK] 数据库表创建完成")
+    _migrate_schema(engine)
+    print("[OK] 数据库表创建/迁移完成")
 
     # 创建触发器
     init_triggers()
