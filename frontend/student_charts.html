@@ -12,9 +12,6 @@ canvas{max-height:300px}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
 .kpi-item{background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;border-radius:10px;padding:14px;text-align:center}
 .kpi-item .val{font-size:26px;font-weight:700}.kpi-item .lbl{font-size:10px;opacity:.85}
-.heat-cal{display:flex;flex-wrap:wrap;gap:4px;max-width:800px}
-.heat-day{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;cursor:default;transition:transform .15s}
-.heat-day:hover{transform:scale(1.3);z-index:2}
 </style>
 </head>
 <body>
@@ -39,17 +36,6 @@ canvas{max-height:300px}
     <div class="chart-card"><h3>⭐ 评分分布（柱状图）</h3><div class="chart-wrap"><canvas id="cRating"></canvas></div></div>
     <div class="chart-card"><h3>⚖️ 借还对比（饼图）</h3><div class="chart-wrap"><canvas id="cBvR"></canvas></div></div>
   </div>
-  <!-- Row 4: 日历热力图 -->
-  <div class="chart-card" style="margin-bottom:16px">
-    <h3>🗓️ 近60天阅读日历（热力图）</h3>
-    <div id="calendar-heat" class="heat-cal" style="margin-top:8px"></div>
-    <div style="font-size:10px;color:#999;margin-top:6px;display:flex;gap:10px;align-items:center">
-      <span>少</span><span style="width:14px;height:14px;border-radius:3px;background:#e8f0fe"></span>
-      <span style="width:14px;height:14px;border-radius:3px;background:#b3d4ff"></span>
-      <span style="width:14px;height:14px;border-radius:3px;background:#5a9fd4"></span>
-      <span style="width:14px;height:14px;border-radius:3px;background:#1a5276"></span><span>多</span>
-    </div>
-  </div>
 </div>
 
 <script src="app.js?v=2"></script>
@@ -69,8 +55,6 @@ async function init(){
   var totalB=0;d.monthly.borrow.forEach(function(v){totalB+=v});
   var totalR=0;d.monthly["return"].forEach(function(v){totalR+=v});
   var activeB=totalB-totalR;
-  var calCounts=d.calendar_heat.map(function(c){return c.count});
-  var maxCal=Math.max.apply(null,calCounts);
 
   document.getElementById("kpi-grid").innerHTML=
     '<div class="kpi-item" style="--c1:#4a90d9;--c2:#6db3f2"><div class="val">'+totalB+'</div><div class="lbl">累计借阅</div></div>'+
@@ -105,16 +89,6 @@ async function init(){
   // Borrow vs Return pie
   new Chart(document.getElementById("cBvR"),{type:"doughnut",data:{labels:["借阅","归还"],datasets:[{data:[totalB,totalR],backgroundColor:["rgba(74,144,217,.8)","rgba(39,174,96,.8)"],borderColor:["#4a90d9","#27ae60"],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
 
-  // Calendar heatmap
-  var calHtml="";var weekLabels='<div style="display:flex;gap:4px;font-size:9px;color:#999;margin-bottom:4px;padding-left:24px">';
-  ["一","二","三","四","五","六","日"].forEach(function(w){weekLabels+='<span style="width:28px;text-align:center">'+w+'</span>'});
-  weekLabels+='</div>';
-  d.calendar_heat.forEach(function(c){
-    var intensity=0;if(maxCal>0)intensity=Math.min(1,c.count/maxCal);
-    var r=Math.round(26+206*(1-intensity)),g=Math.round(83+133*(1-intensity)),b=Math.round(163+28*(1-intensity));
-    calHtml+='<div class="heat-day" style="background:rgb('+r+','+g+','+b+')" title="'+c.date+' 借阅:'+c.count+'本">'+(c.count||"")+'</div>';
-  });
-  document.getElementById("calendar-heat").innerHTML=weekLabels+calHtml;
 }
 init();
 </script>
