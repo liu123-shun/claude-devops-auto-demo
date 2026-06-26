@@ -124,7 +124,7 @@ function loadBooks(page=1){
     if(currentView==="grid"){
       container.className="book-grid";
       container.innerHTML=items.map(b=>`
-        <div class="book-card ${b.stock<=0?'out-of-stock':''}" onclick="viewDetail(${b.id})"><button class="fav-star-btn" onclick="toggleFavorite(${b.id},event)" title="收藏">♥</button>
+        <div class="book-card ${b.stock<=0?'out-of-stock':''}" onclick="viewDetail(${b.id})"><button class="fav-star-btn ${favoriteIds[b.id]?'favved':''}" onclick="toggleFavorite(${b.id},event)" title="${favoriteIds[b.id]?'取消收藏':'收藏'}">${favoriteIds[b.id]?'❤️':'♡'}</button>
           <div class="book-cover">
             <span>📘</span>
             <span class="cat-badge">${b.category||"未分类"}</span>
