@@ -27,6 +27,19 @@ def get_book_avg_rating(db: Session, book_id: int) -> Optional[float]:
     return {"avg": float(row[0]) if row[0] else 0.0, "count": row[1]}
 
 
+def get_review_by_id(db: Session, review_id: int) -> Optional[BookReview]:
+    return db.query(BookReview).filter(BookReview.id == review_id).first()
+
+
+def update_review(db: Session, review_id: int, rating: Optional[int] = None, comment: Optional[str] = None) -> Optional[BookReview]:
+    r = db.query(BookReview).filter(BookReview.id == review_id).first()
+    if not r: return None
+    if rating is not None: r.rating = rating
+    if comment is not None: r.comment = comment
+    db.commit(); db.refresh(r)
+    return r
+
+
 def delete_review(db: Session, review_id: int) -> bool:
     r = db.query(BookReview).filter(BookReview.id == review_id).first()
     if not r: return False

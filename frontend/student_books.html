@@ -167,8 +167,13 @@ async function viewDetail(id){
     <tr><td style="color:#6b8299;">累计借阅</td><td>${d.total_borrows} 次</td></tr></table>
     ${d.description?`<p style="margin-top:10px;color:#555;font-size:13px;">📝 ${d.description}</p>`:''}
     <div style="margin-top:14px;"><strong>💬 评论</strong></div>
-    <div id="review-list" style="max-height:180px;overflow-y:auto;font-size:12px;">${(d.reviews||[]).length?d.reviews.map(rv=>`<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;"><span style="color:#f39c12;">${'★'.repeat(rv.rating)}${'☆'.repeat(5-rv.rating)}</span> <strong>${rv.user_name}</strong><span style="color:#999;font-size:11px;margin-left:4px;">${(rv.create_time||'').slice(0,10)}</span>${rv.comment?`<div style="color:#555;margin-top:2px;">${rv.comment}</div>`:''}</div>`).join(""):'<span style="color:#999;">暂无评论</span>'}</div>
-    <div id="review-form" style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;"></div>
+    <div id="review-list" style="max-height:180px;overflow-y:auto;font-size:12px;">${(d.reviews||[]).length?d.reviews.map(function(rv){
+      var isMine = rv.user_name === (user.name || user.username);
+      return '<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;position:relative;"><span style="color:#f39c12;">'+'★'.repeat(rv.rating)+'☆'.repeat(5-rv.rating)+'</span> <strong>'+rv.user_name+'</strong><span style="color:#999;font-size:11px;margin-left:4px;">'+(rv.create_time||'').slice(0,10)+'</span>'+
+        (isMine?'<span style="float:right;font-size:10px;"><a href="#" onclick="event.preventDefault();editMyReview('+rv.id+','+rv.rating+',\''+(rv.comment||'').replace(/'/g,\"\\'\")+'\')" style="color:#4a90d9;margin-right:6px;">编辑</a><a href="#" onclick="event.preventDefault();deleteMyReview('+rv.id+','+d.id+')" style="color:#e74c3c;">删除</a></span>':'')+
+        (rv.comment?'<div style="color:#555;margin-top:2px;">'+rv.comment+'</div>':'')+'</div>';
+    }).join(""):'<span style="color:#999;">暂无评论</span>'}
+</div><div id="review-form" style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;"></div>
   `;
 
   // 检查是否可以评分
@@ -206,6 +211,42 @@ async function submitReview(bookId){
   var res=await fetch("/api/student/reviews",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({book_id:bookId,rating:rating,comment:comment||null})});
   if(res.ok){alert("评价成功！");closeModal("detail-modal");viewDetail(bookId);}
   else{var d=await res.json();alert(d.detail||"提交失败");}
+}
+
+
+async function editMyReview(reviewId, oldRating, oldComment){
+  var html = '<div style="font-weight:600;font-size:12px;margin-bottom:6px;">✏️ 修改评价</div><div id="edit-star-picker" style="font-size:22px;cursor:pointer;margin-bottom:4px;">';
+  for(var i=1;i<=5;i++){ html += '<span data-s="'+i+'" style="color:'+(i<=oldRating?'#f39c12':'#ddd')+';">★</span>'; }
+  html += '</div><textarea id="edit-rv-comment" rows="2" style="width:100%;border:1px solid #dce3ea;border-radius:6px;padding:6px;font-size:12px;">'+(oldComment||'')+'</textarea>';
+  html += '<div style="display:flex;gap:6px;margin-top:6px;"><button class="btn btn-primary btn-sm" onclick="submitEditReview('+reviewId+')">保存修改</button><button class="btn btn-outline btn-sm" onclick="cancelEditReview()">取消</button></div>';
+  document.getElementById("review-form").innerHTML=html;
+  var stars=document.querySelectorAll("#edit-star-picker span");
+  var currentRating=oldRating;
+  stars.forEach(function(s,i){
+    s.addEventListener("click",function(){currentRating=i+1;stars.forEach(function(ss,j){ss.style.color=j<currentRating?"#f39c12":"#ddd";});});
+    s.addEventListener("mouseenter",function(){stars.forEach(function(ss,j){ss.style.color=j<=i?"#f1c40f":"#ddd";});});
+  });
+  document.getElementById("edit-star-picker").addEventListener("mouseleave",function(){stars.forEach(function(ss,j){ss.style.color=j<currentRating?"#f39c12":"#ddd";});});
+  window._editReviewRating=function(){return currentRating;};
+}
+
+function cancelEditReview(){
+  if(pendingBook) loadReviewForm(pendingBook.id);
+}
+
+async function submitEditReview(reviewId){
+  var rating=(window._editReviewRating&&window._editReviewRating())||3;
+  var comment=document.getElementById("edit-rv-comment").value.trim();
+  var res=await fetch("/api/student/reviews/"+reviewId,{method:"PUT",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({rating:rating,comment:comment||null})});
+  if(res.ok){alert("修改成功！");closeModal("detail-modal");viewDetail(pendingBook.id);}
+  else{var d=await res.json();alert(d.detail||"修改失败");}
+}
+
+async function deleteMyReview(reviewId, bookId){
+  if(!confirm("确定删除自己的评价？"))return;
+  var res=await apiDelete("/api/student/reviews/"+reviewId);
+  if(!res)return;
+  if(res.message){alert("已删除");closeModal("detail-modal");viewDetail(bookId);}
 }
 
 async function borrowFromDetail(){

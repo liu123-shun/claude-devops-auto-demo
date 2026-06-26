@@ -403,6 +403,43 @@ def submit_review(
     return {"id": r.id, "rating": r.rating, "comment": r.comment, "message": "评分成功"}
 
 
+@router.put("/reviews/{review_id}")
+def update_review(
+    review_id: int,
+    body: dict = Body(...),
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """修改自己的评论评分。body: {rating:1-5, comment}"""
+    from ..dao.review_dao import get_review_by_id, update_review as do_update
+    rv = get_review_by_id(db, review_id)
+    if not rv:
+        raise HTTPException(status_code=404, detail="评论不存在")
+    if rv.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="只能修改自己的评论")
+    rating = body.get("rating", rv.rating)
+    comment = body.get("comment", rv.comment)
+    rv = do_update(db, review_id, int(rating), comment)
+    return {"id": rv.id, "rating": rv.rating, "comment": rv.comment, "message": "修改成功"}
+
+
+@router.delete("/reviews/{review_id}")
+def delete_my_review(
+    review_id: int,
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """删除自己的评论"""
+    from ..dao.review_dao import get_review_by_id, delete_review as do_delete
+    rv = get_review_by_id(db, review_id)
+    if not rv:
+        raise HTTPException(status_code=404, detail="评论不存在")
+    if rv.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="只能删除自己的评论")
+    do_delete(db, review_id)
+    return {"message": "已删除"}
+
+
 # ===== 我的收藏 =====
 
 @router.get("/favorites")
