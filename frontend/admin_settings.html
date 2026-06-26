@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统设置 — 管理后台</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid #f0f0f0; }
+.setting-row:last-child { border-bottom:none; }
+.setting-info { flex:1; }
+.setting-info .key { font-weight:700; font-size:14px; color:#2c3e50; }
+.setting-info .desc { font-size:12px; color:#6b8299; margin-top:2px; }
+.setting-input { width:120px; text-align:right; }
+.setting-input input { width:100%; padding:6px 10px; border:1px solid #dce3ea; border-radius:6px; font-size:13px; text-align:center; }
+.setting-input select { width:100%; padding:6px 10px; border:1px solid #dce3ea; border-radius:6px; font-size:13px; }
+.save-bar { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:2px solid #f0f0f0; }
+.save-msg { background:#e8f5e9; color:#2e7d32; padding:10px 14px; border-radius:8px; font-size:13px; display:none; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 管理后台</div>
+  <div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div>
+</div>
+<div class="sidebar" id="sidebar"></div>
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 系统设置</div>
+
+  <div class="card">
+    <div class="card-title">⚙️ 系统参数配置</div>
+    <p style="font-size:12px;color:#6b8299;margin-bottom:20px;">修改后点击保存立即生效，无需重启服务</p>
+    <div id="settings-list"></div>
+    <div class="save-bar">
+      <button class="btn btn-outline" onclick="loadSettings()">取消/重置</button>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+    </div>
+    <div id="save-msg" class="save-msg"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+const user=checkAuth();
+if(!user||user.role!=="admin"){alert("仅管理员可访问");window.location.href="login.html";}
+displayUserInfo();
+renderSidebar("admin");
+
+async function loadSettings(){
+  const d=await apiGet("/api/admin/settings");
+  if(!d||!d.items)return;
+  var html='';
+  d.items.forEach(function(s){
+    var input;
+    if(s.type==='bool'){
+      input='<select data-key="'+s.key+'" data-type="'+s.type+'"><option value="1" '+(s.value==='1'?'selected':'')+'>开启</option><option value="0" '+(s.value==='0'?'selected':'')+'>关闭</option></select>';
+    }else{
+      input='<input type="'+(s.type==='float'?'number':s.type==='int'?'number':'text')+'" value="'+s.value+'" data-key="'+s.key+'" data-type="'+s.type+'"'+(s.type==='int'?' step="1" min="1"':'')+(s.type==='float'?' step="0.5" min="0"':'')+'>';
+    }
+    html+='<div class="setting-row"><div class="setting-info"><div class="key">'+s.key+'</div><div class="desc">'+s.description+'</div></div><div class="setting-input">'+input+'</div></div>';
+  });
+  document.getElementById("settings-list").innerHTML=html;
+}
+
+async function saveSettings(){
+  var inputs=document.querySelectorAll("[data-key]");
+  var configs={};
+  inputs.forEach(function(el){
+    configs[el.dataset.key]=el.value;
+  });
+  var res=await apiPut("/api/admin/settings",configs);
+  if(!res)return;
+  var msg=document.getElementById("save-msg");
+  msg.textContent=(res.message||"保存成功")+" — 设置已即时生效";
+  msg.style.display="block";
+  setTimeout(function(){msg.style.display="none";},3000);
+}
+
+loadSettings();
+</script>
+</body>
+</html>

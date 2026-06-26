@@ -169,6 +169,9 @@ function renderSidebar(role) {
                 { href: "admin_borrow_log.html", icon: "&#x1F4CB;", label: "借阅日志" },
                 { href: "admin_overdue.html", icon: "&#x26A0;&#xFE0F;", label: "逾期图书" },
             ]},
+            { group: "系统", items: [
+                { href: "admin_settings.html", icon: "&#x2699;&#xFE0F;", label: "系统设置" },
+            ]},
         ];
     } else {
         menu = [

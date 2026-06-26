@@ -17,13 +17,38 @@ def borrow_book(db: Session, book_id: int, reader_id: int) -> Optional[BorrowRec
     """
     借书操作：
     1. 校验图书是否存在且库存 > 0
-    2. 创建借阅记录（触发器自动扣库存+写日志）
+    2. 校验该读者是否已达到最大借书数
+    3. 校验该读者是否有逾期未还
+    4. 创建借阅记录（触发器自动扣库存+写日志）
     """
+    from ..dao.config_dao import get_config_int
+
     book = book_dao.get_book_by_id(db, book_id)
     if not book:
         raise ValueError("图书不存在")
     if book.stock <= 0:
         raise ValueError("图书库存不足，无法借阅")
+
+    # 借阅数量限制
+    max_borrow = get_config_int(db, "max_borrow_count")
+    current_borrows = db.query(BorrowRecord).filter(
+        BorrowRecord.reader_id == reader_id,
+        BorrowRecord.return_time.is_(None),
+    ).count()
+    if current_borrows >= max_borrow:
+        raise ValueError("已达到最大借书数量（{}本），请先归还后再借".format(max_borrow))
+
+    # 逾期未还禁止再借
+    from datetime import datetime, timedelta
+    overdue_days = get_config_int(db, "overdue_days")
+    threshold = datetime.now() - timedelta(days=overdue_days)
+    has_overdue = db.query(BorrowRecord).filter(
+        BorrowRecord.reader_id == reader_id,
+        BorrowRecord.return_time.is_(None),
+        BorrowRecord.borrow_time < threshold,
+    ).first()
+    if has_overdue:
+        raise ValueError("你有逾期未还的图书，请先归还后再借")
 
     record = BorrowRecord(
         book_id=book_id,

@@ -58,9 +58,11 @@ async def lifespan(app: FastAPI):
     # 创建默认管理员账号
     from .db.database import SessionLocal
     from .service.auth_service import create_default_admin
+    from .dao.config_dao import init_defaults
     db = SessionLocal()
     try:
         create_default_admin(db)
+        init_defaults(db)
     finally:
         db.close()
 

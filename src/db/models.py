@@ -125,3 +125,15 @@ class BookReview(Base):
 
     user = relationship("SysUser")
     book = relationship("Book")
+
+
+class SystemConfig(Base):
+    """系统配置表 — 键值对存储"""
+    __tablename__ = "system_config"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    config_key = Column(String(64), unique=True, nullable=False, index=True, comment="配置键")
+    config_value = Column(String(255), nullable=False, comment="配置值")
+    config_type = Column(String(16), nullable=False, default="string", comment="值类型: string/int/float/bool")
+    description = Column(String(255), nullable=True, comment="配置说明")
+    update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment="更新时间")

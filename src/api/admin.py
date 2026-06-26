@@ -285,6 +285,27 @@ async def import_books(
     return {"message": "导入完成：成功{}本，跳过{}行".format(added, skipped), "added": added, "skipped": skipped, "errors": errors}
 
 
+# ==================== 系统设置 ====================
+
+@router.get("/settings")
+def get_settings(db: Session = Depends(get_db)):
+    """获取全部系统配置项"""
+    from ..dao.config_dao import get_all_config
+    return {"items": get_all_config(db)}
+
+
+@router.put("/settings")
+def update_settings(
+    body: dict,
+    db: Session = Depends(get_db),
+):
+    """批量更新系统配置。body: {key1: value1, key2: value2, ...}"""
+    from ..dao.config_dao import batch_save_config
+    batch_save_config(db, body)
+    return {"message": "设置已保存"}
+
+
+
 # ==================== 分类 ====================
 
 @router.get("/categories")
