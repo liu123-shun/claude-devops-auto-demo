@@ -10,7 +10,7 @@
 - 登录日志（时间筛选）
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -230,20 +230,91 @@ def list_available_books(
 
 @router.get("/books/{book_id}")
 def get_book_detail(book_id: int, db: Session = Depends(get_db)):
-    """获取单本图书详情"""
+    """获取单本图书详情（含评分）"""
     book = book_dao.get_book_by_id(db, book_id)
     if not book:
         raise HTTPException(status_code=404, detail="图书不存在")
+    from ..dao.review_dao import get_book_avg_rating, get_book_reviews
+    rating = get_book_avg_rating(db, book_id)
+    reviews, _ = get_book_reviews(db, book_id, 1, 5)
+    review_items = []
+    for rv in reviews:
+        review_items.append({
+            "id": rv.id, "rating": rv.rating, "comment": rv.comment,
+            "user_name": rv.user.name if rv.user else "匿名",
+            "create_time": rv.create_time.isoformat() if rv.create_time else None,
+        })
     return {
         "id": book.id, "book_name": book.book_name, "author": book.author,
         "category": book.category, "isbn": book.isbn, "publisher": book.publisher,
         "description": book.description, "cover_url": book.cover_url,
         "publish_time": book.publish_time.isoformat() if book.publish_time else None,
         "stock": book.stock, "total_borrows": book.total_borrows,
+        "avg_rating": round(rating["avg"], 1), "review_count": rating["count"],
+        "reviews": review_items,
     }
 
 
-# ==================== 分类 ====================
+# ===== 评分评论 =====
+
+@router.get("/reviews/check/{book_id}")
+def check_can_review(
+    book_id: int,
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """检查当前学生是否可以给指定图书评分（需有已归还记录且未评过分）"""
+    user_id = current_user["user_id"]
+    from ..db.models import BorrowRecord
+    from ..dao.review_dao import get_user_review
+    # 是否归还过该书
+    has_returned = db.query(BorrowRecord).filter(
+        BorrowRecord.book_id == book_id,
+        BorrowRecord.reader_id == _get_student_reader_id(db, user_id),
+        BorrowRecord.return_time.isnot(None),
+    ).first()
+    if not has_returned:
+        return {"can_review": False, "reason": "您尚未归还此书，暂不能评分"}
+    # 是否已评过分
+    existing = get_user_review(db, book_id, user_id)
+    if existing:
+        return {"can_review": False, "reason": "您已评过分了", "my_review": {"rating": existing.rating, "comment": existing.comment}}
+    return {"can_review": True, "reason": ""}
+
+
+@router.post("/reviews", status_code=status.HTTP_201_CREATED)
+def submit_review(
+    body: dict = Body(...),
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """提交评分评论。body: {book_id, rating:1-5, comment}。仅已归还且未评过的书可评。"""
+    user_id = current_user["user_id"]
+    reader_id = _get_student_reader_id(db, user_id)
+    book_id = body.get("book_id", 0)
+    rating = body.get("rating", 3)
+    comment = body.get("comment", None) or None
+
+    from ..db.models import BorrowRecord
+    from ..dao.review_dao import create_review, get_user_review
+
+    has_returned = db.query(BorrowRecord).filter(
+        BorrowRecord.book_id == book_id,
+        BorrowRecord.reader_id == reader_id,
+        BorrowRecord.return_time.isnot(None),
+    ).first()
+    if not has_returned:
+        raise HTTPException(status_code=400, detail="归还后方可评分")
+
+    existing = get_user_review(db, book_id, user_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="您已评过分，不能重复评价")
+
+    r = create_review(db, book_id, user_id, int(rating), comment)
+    return {"id": r.id, "rating": r.rating, "comment": r.comment, "message": "评分成功"}
+
+
+# ===== 分类 =====
 
 @router.get("/categories")
 def list_categories(db: Session = Depends(get_db)):

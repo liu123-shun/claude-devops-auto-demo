@@ -137,6 +137,7 @@ async function viewDetail(id){
   pendingBook=d;
   document.getElementById("detail-content").innerHTML=`
     <h3>${d.book_name}</h3>
+    ${d.avg_rating>0?`<div style="font-size:20px;margin:4px 0;">${'★'.repeat(Math.round(d.avg_rating))}${'☆'.repeat(5-Math.round(d.avg_rating))} <span style="font-size:14px;color:#f39c12;font-weight:700;">${d.avg_rating}</span> <span style="font-size:12px;color:#6b8299;">(${d.review_count}条评价)</span></div>`:'<div style="font-size:12px;color:#999;">暂无评分</div>'}
     <table style="margin-top:10px;"><tr><td style="color:#6b8299;width:70px;">作者</td><td>${d.author}</td></tr>
     <tr><td style="color:#6b8299;">分类</td><td>${d.category||'-'}</td></tr>
     <tr><td style="color:#6b8299;">ISBN</td><td>${d.isbn||'-'}</td></tr>
@@ -144,10 +145,46 @@ async function viewDetail(id){
     <tr><td style="color:#6b8299;">库存</td><td><strong style="color:${d.stock>0?'#27ae60':'#e74c3c'};">${d.stock>0?d.stock+' 册':'已借完'}</strong></td></tr>
     <tr><td style="color:#6b8299;">累计借阅</td><td>${d.total_borrows} 次</td></tr></table>
     ${d.description?`<p style="margin-top:10px;color:#555;font-size:13px;">📝 ${d.description}</p>`:''}
+    <div style="margin-top:14px;"><strong>💬 评论</strong></div>
+    <div id="review-list" style="max-height:180px;overflow-y:auto;font-size:12px;">${(d.reviews||[]).length?d.reviews.map(rv=>`<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;"><span style="color:#f39c12;">${'★'.repeat(rv.rating)}${'☆'.repeat(5-rv.rating)}</span> <strong>${rv.user_name}</strong><span style="color:#999;font-size:11px;margin-left:4px;">${(rv.create_time||'').slice(0,10)}</span>${rv.comment?`<div style="color:#555;margin-top:2px;">${rv.comment}</div>`:''}</div>`).join(""):'<span style="color:#999;">暂无评论</span>'}</div>
+    <div id="review-form" style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;"></div>
   `;
+
+  // 检查是否可以评分
+  loadReviewForm(d.id);
   const btn=document.getElementById("detail-borrow-btn");
   if(d.stock>0){btn.style.display="";btn.textContent="📥 立即借阅";}else{btn.style.display="none";}
   openModal("detail-modal");
+}
+
+async function loadReviewForm(bookId){
+  const check=await apiGet("/api/student/reviews/check/"+bookId);
+  var formDiv=document.getElementById("review-form");
+  if(!formDiv)return;
+  if(check&&check.can_review){
+    formDiv.innerHTML='<div style="font-weight:600;font-size:12px;margin-bottom:6px;">✍️ 写评价</div><div id="star-picker" style="font-size:22px;cursor:pointer;margin-bottom:4px;">'+[1,2,3,4,5].map(function(i){return'<span data-s="'+i+'" style="color:#ddd;">★</span>';}).join("")+'</div><textarea id="rv-comment" rows="2" placeholder="说说你的阅读感受（选填）" style="width:100%;border:1px solid #dce3ea;border-radius:6px;padding:6px;font-size:12px;"></textarea><button class="btn btn-primary btn-sm" onclick="submitReview('+bookId+')" style="margin-top:6px;">提交评价</button>';
+    var stars=document.querySelectorAll("#star-picker span");
+    var currentRating=0;
+    stars.forEach(function(s,i){
+      s.addEventListener("click",function(){currentRating=i+1;stars.forEach(function(ss,j){ss.style.color=j<currentRating?"#f39c12":"#ddd";});});
+      s.addEventListener("mouseenter",function(){stars.forEach(function(ss,j){ss.style.color=j<=i?"#f1c40f":"#ddd";});});
+    });
+    document.getElementById("star-picker").addEventListener("mouseleave",function(){stars.forEach(function(ss,j){ss.style.color=j<currentRating?"#f39c12":"#ddd";});});
+    window._reviewRating=function(){return currentRating;};
+  }else if(check&&check.my_review){
+    formDiv.innerHTML='<div style="font-size:12px;color:#6b8299;">✅ 你已评价：<span style="color:#f39c12;">'+('★'.repeat(check.my_review.rating))+'☆'.repeat(5-check.my_review.rating)+'</span>'+(check.my_review.comment?' <span style="color:#555;">\"'+check.my_review.comment+'\"</span>':'')+'</div>';
+  }else if(check){
+    formDiv.innerHTML='<div style="font-size:12px;color:#999;">'+check.reason+'</div>';
+  }
+}
+
+async function submitReview(bookId){
+  var rating=(window._reviewRating&&window._reviewRating())||3;
+  var comment=document.getElementById("rv-comment").value.trim();
+  if(rating===0){alert("请先点击星星评分");return;}
+  var res=await fetch("/api/student/reviews",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({book_id:bookId,rating:rating,comment:comment||null})});
+  if(res.ok){alert("评价成功！");closeModal("detail-modal");viewDetail(bookId);}
+  else{var d=await res.json();alert(d.detail||"提交失败");}
 }
 
 async function borrowFromDetail(){

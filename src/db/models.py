@@ -110,3 +110,18 @@ class Announcement(Base):
     update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment="更新时间")
 
     publisher = relationship("SysUser")
+
+
+class BookReview(Base):
+    """图书评分评论表"""
+    __tablename__ = "book_review"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    book_id = Column(Integer, ForeignKey("book.id"), nullable=False, comment="图书ID")
+    user_id = Column(Integer, ForeignKey("sys_user.id"), nullable=False, comment="评论用户ID")
+    rating = Column(Integer, nullable=False, comment="评分: 1-5")
+    comment = Column(Text, nullable=True, comment="评论内容")
+    create_time = Column(DateTime, default=datetime.now, comment="评论时间")
+
+    user = relationship("SysUser")
+    book = relationship("Book")

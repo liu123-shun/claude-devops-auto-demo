@@ -193,7 +193,7 @@ def get_book_detail(book_id: int, db: Session = Depends(get_db)):
             "return_time": r.return_time.isoformat() if r.return_time else None,
             "status": r.status,
         })
-    return {
+    result = {
         "id": book.id, "book_name": book.book_name, "author": book.author,
         "category": book.category, "isbn": book.isbn, "publisher": book.publisher,
         "description": book.description, "cover_url": book.cover_url,
@@ -202,6 +202,20 @@ def get_book_detail(book_id: int, db: Session = Depends(get_db)):
         "create_time": book.create_time.isoformat() if book.create_time else None,
         "recent_records": records,
     }
+    # 追加评分信息
+    from ..dao.review_dao import get_book_avg_rating, get_book_reviews
+    rating = get_book_avg_rating(db, book_id)
+    result["avg_rating"] = round(rating["avg"], 1)
+    result["review_count"] = rating["count"]
+    revs, _ = get_book_reviews(db, book_id, 1, 5)
+    result["reviews"] = []
+    for rv in revs[:5]:
+        result["reviews"].append({
+            "id": rv.id, "rating": rv.rating, "comment": rv.comment,
+            "user_name": rv.user.name if rv.user else "匿名",
+            "create_time": rv.create_time.isoformat() if rv.create_time else None,
+        })
+    return result
 
 
 @router.post("/books", status_code=status.HTTP_201_CREATED)
@@ -403,6 +417,38 @@ def admin_change_password(
     user.password = auth_service.hash_password(new_password)
     db.commit()
     return {"message": "密码修改成功"}
+
+
+# ==================== 评论管理 ====================
+
+@router.get("/reviews")
+def list_reviews(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(PAGE_SIZE, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """管理员查看全部评论列表"""
+    from ..dao.review_dao import list_all_reviews
+    items, total = list_all_reviews(db, page, page_size)
+    data = []
+    for rv in items:
+        data.append({
+            "id": rv.id, "book_id": rv.book_id,
+            "book_name": rv.book.book_name if rv.book else None,
+            "user_name": rv.user.name if rv.user else "匿名",
+            "rating": rv.rating, "comment": rv.comment,
+            "create_time": rv.create_time.isoformat() if rv.create_time else None,
+        })
+    return {"items": data, "total": total, "page": page, "page_size": page_size}
+
+
+@router.delete("/reviews/{review_id}")
+def delete_review(review_id: int, db: Session = Depends(get_db)):
+    """管理员删除不当评论"""
+    from ..dao.review_dao import delete_review as del_review
+    if not del_review(db, review_id):
+        raise HTTPException(status_code=404, detail="评论不存在")
+    return {"message": "删除成功"}
 
 
 # ==================== 日志查询 ====================

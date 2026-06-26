@@ -34,6 +34,7 @@ def _migrate_schema(engine):
         "ALTER TABLE book ADD COLUMN cover_url VARCHAR(512) NULL COMMENT '封面图片URL'",
         "ALTER TABLE book ADD COLUMN total_borrows INT NOT NULL DEFAULT 0 COMMENT '累计借阅次数'",
     ]
+    # 新表在 create_all 时自动创建，无需手动 migrate
     with engine.connect() as conn:
         for sql in migrations:
             try:
