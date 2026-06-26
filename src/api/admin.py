@@ -220,14 +220,50 @@ def get_book_detail(book_id: int, db: Session = Depends(get_db)):
     return result
 
 
+def _auto_fetch_cover(isbn: str) -> str:
+    """从 OpenLibrary API 获取封面URL，失败返回空字符串"""
+    if not isbn or not isbn.strip():
+        return ""
+    import urllib.request
+    try:
+        url = "https://covers.openlibrary.org/b/isbn/{}-L.jpg".format(isbn.strip())
+        req = urllib.request.Request(url, method="HEAD")
+        resp = urllib.request.urlopen(req, timeout=5)
+        if resp.status == 200:
+            return url
+    except Exception:
+        pass
+    return ""
+
+
 @router.post("/books", status_code=status.HTTP_201_CREATED)
 def create_book(body: BookCreate, db: Session = Depends(get_db)):
-    """新增图书"""
+    """新增图书，自动根据ISBN获取封面"""
+    cover = body.cover_url or ""
+    if not cover and body.isbn:
+        cover = _auto_fetch_cover(body.isbn)
     return book_service.add_book(
         db, body.book_name, body.author, body.category,
-        body.isbn, body.publisher, body.description, body.cover_url,
+        body.isbn, body.publisher, body.description, cover,
         body.publish_time, body.stock,
     )
+
+
+@router.post("/books/fetch-covers")
+def batch_fetch_covers(db: Session = Depends(get_db)):
+    """批量补充数据库中所有缺少封面的图书的封面图"""
+    books = db.query(Book).filter(
+        (Book.isbn.isnot(None)) & (Book.isbn != "") &
+        ((Book.cover_url.is_(None)) | (Book.cover_url == ""))
+    ).all()
+    updated = 0
+    for book in books:
+        cover = _auto_fetch_cover(book.isbn)
+        if cover:
+            book.cover_url = cover
+            updated += 1
+    db.commit()
+    return {"message": "已处理{}本图书，{}本成功获取封面".format(len(books), updated), "total": len(books), "updated": updated}
 
 
 @router.put("/books/{book_id}")

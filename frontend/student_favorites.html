@@ -9,7 +9,8 @@
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;}
 .book-card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);overflow:hidden;transition:all .2s;cursor:pointer;display:flex;flex-direction:column;position:relative;}
 .book-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.12);transform:translateY(-2px);}
-.book-cover{height:130px;background:linear-gradient(135deg,#e3edf7,#c8ddf5);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;}
+.book-cover{height:130px;background:linear-gradient(135deg,#e3edf7,#c8ddf5);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;overflow:hidden;}
+.book-cover img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
 .book-cover .cat-badge{position:absolute;top:8px;right:8px;background:rgba(74,144,217,0.85);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;}
 .book-cover .stock-badge{position:absolute;bottom:8px;left:8px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
 .book-info{padding:14px;flex:1;display:flex;flex-direction:column;}
@@ -59,7 +60,7 @@ function loadFavorites(page){
       container.innerHTML=data.items.map(function(b){
         return '<div class="book-card '+ (b.stock<=0?'out-of-stock':'') +'" onclick="viewDetail('+b.book_id+')">'
           +'<button class="unfav-btn" onclick="event.stopPropagation();unfav('+b.book_id+')" title="取消收藏">✕</button>'
-          +'<div class="book-cover"><span>📘</span><span class="cat-badge">'+(b.category||"未分类")+'</span>'
+          +'<div class="book-cover">'+(b.cover_url?'<img src="'+b.cover_url+'" alt="'+b.book_name+'" onerror="this.style.display=\'none\'" loading="lazy">':'')+'<span>📘</span><span class="cat-badge">'+(b.category||"未分类")+'</span>'
           +'<span class="stock-badge" style="background:'+(b.stock>3?'#e8f5e9':b.stock>0?'#fff3e0':'#ffebee')+';color:'+(b.stock>3?'#2e7d32':b.stock>0?'#e65100':'#c62828')+';">'+(b.stock>0?'库存 '+b.stock:'已借完')+'</span></div>'
           +'<div class="book-info"><div class="book-title" title="'+b.book_name+'">'+b.book_name+'</div>'
           +'<div class="book-author">✍️ '+b.author+'</div>'
