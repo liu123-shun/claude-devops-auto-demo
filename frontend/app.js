@@ -181,6 +181,7 @@ function renderSidebar(role) {
             ]},
             { group: "我的记录", items: [
                 { href: "student_my_borrow.html", icon: "&#x1F4D6;", label: "我的借阅" },
+                { href: "student_favorites.html", icon: "&#x2B50;", label: "我的收藏" },
                 { href: "student_stats.html", icon: "&#x1F4C8;", label: "阅读统计" },
                 { href: "student_my_login_log.html", icon: "&#x1F4DD;", label: "登录日志" },
             ]},

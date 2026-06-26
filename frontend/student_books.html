@@ -21,7 +21,7 @@
 .view-toggle{display:flex;gap:0;background:#f0f4f8;border-radius:8px;padding:4px;width:fit-content;}
 .view-toggle button{padding:6px 14px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:#6b8299;}
 .view-toggle button.active{background:#fff;color:#4a90d9;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
-</style>
+.fav-star-btn{position:absolute;top:6px;left:6px;background:rgba(255,255,255,0.9);border:1px solid #ddd;width:26px;height:26px;border-radius:50%;font-size:14px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;transition:all .2s;}.fav-star-btn.favved{color:#e74c3c;border-color:#e74c3c;}</style>
 </head>
 <body>
 <div class="topbar">
@@ -74,7 +74,28 @@ renderSidebar("student");
 
 let currentPage=1, currentView="grid", pendingBook=null;
 
+var favoriteIds = {};
+
+async function loadFavoriteIds(){
+  var d = await apiGet("/api/student/favorites/ids");
+  if(d&&d.ids){ d.ids.forEach(function(id){favoriteIds[id]=true;}); }
+}
+
+async function toggleFavorite(bookId, event){
+  if(event)event.stopPropagation();
+  if(favoriteIds[bookId]){
+    await apiDelete("/api/student/favorites/"+bookId);
+    delete favoriteIds[bookId];
+  }else{
+    await apiPost("/api/student/favorites?book_id="+bookId);
+    favoriteIds[bookId]=true;
+  }
+  loadBooks(currentPage);
+}
+
+
 async function init(){
+  loadFavoriteIds();
   const cats=await apiGet("/api/student/categories");
   if(cats)cats.forEach(c=>{document.getElementById("filter-category").innerHTML+=`<option value="${c.name}">${c.name}(${c.count})</option>`;});
   loadBooks();
@@ -103,7 +124,7 @@ function loadBooks(page=1){
     if(currentView==="grid"){
       container.className="book-grid";
       container.innerHTML=items.map(b=>`
-        <div class="book-card ${b.stock<=0?'out-of-stock':''}" onclick="viewDetail(${b.id})">
+        <div class="book-card ${b.stock<=0?'out-of-stock':''}" onclick="viewDetail(${b.id})"><button class="fav-star-btn" onclick="toggleFavorite(${b.id},event)" title="收藏">♥</button>
           <div class="book-cover">
             <span>📘</span>
             <span class="cat-badge">${b.category||"未分类"}</span>

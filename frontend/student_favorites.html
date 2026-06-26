@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的收藏 — 学生端</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;}
+.book-card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);overflow:hidden;transition:all .2s;cursor:pointer;display:flex;flex-direction:column;position:relative;}
+.book-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.12);transform:translateY(-2px);}
+.book-cover{height:130px;background:linear-gradient(135deg,#e3edf7,#c8ddf5);display:flex;align-items:center;justify-content:center;font-size:48px;position:relative;}
+.book-cover .cat-badge{position:absolute;top:8px;right:8px;background:rgba(74,144,217,0.85);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;}
+.book-cover .stock-badge{position:absolute;bottom:8px;left:8px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.book-info{padding:14px;flex:1;display:flex;flex-direction:column;}
+.book-title{font-weight:700;font-size:14px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.book-author{font-size:12px;color:#6b8299;margin-bottom:4px;}
+.book-meta{font-size:11px;color:#999;display:flex;gap:12px;margin-top:auto;}
+.unfav-btn{position:absolute;top:8px;right:8px;background:rgba(231,76,60,0.85);color:#fff;border:none;width:24px;height:24px;border-radius:50%;font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:5;}
+.book-card:hover .unfav-btn{display:flex;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 学生端</div>
+  <div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div>
+</div>
+<div class="sidebar" id="sidebar"></div>
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 我的收藏</div>
+
+  <div class="card">
+    <div class="card-title">⭐ 我的收藏</div>
+    <div class="book-grid" id="fav-container"></div>
+    <div id="fav-empty" class="empty-state" style="display:none;">
+      <p>📭 还没有收藏任何图书</p>
+      <p style="font-size:12px;color:#6b8299;margin-top:4px;">去<a href="student_books.html" style="color:#4a90d9;">馆藏浏览</a>发现好书吧</p>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script src="app.js?v=2"></script>
+<script>
+var user=checkAuth();
+if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
+displayUserInfo();
+renderSidebar("student");
+
+function loadFavorites(page){
+  page=page||1;
+  apiGet("/api/student/favorites?page="+page+"&page_size=12").then(function(data){
+    if(!data)return;
+    var container=document.getElementById("fav-container");
+    var empty=document.getElementById("fav-empty");
+    if(!data.items||data.items.length===0){container.innerHTML="";empty.style.display="block";}
+    else{
+      empty.style.display="none";
+      container.innerHTML=data.items.map(function(b){
+        return '<div class="book-card '+ (b.stock<=0?'out-of-stock':'') +'" onclick="viewDetail('+b.book_id+')">'
+          +'<button class="unfav-btn" onclick="event.stopPropagation();unfav('+b.book_id+')" title="取消收藏">✕</button>'
+          +'<div class="book-cover"><span>📘</span><span class="cat-badge">'+(b.category||"未分类")+'</span>'
+          +'<span class="stock-badge" style="background:'+(b.stock>3?'#e8f5e9':b.stock>0?'#fff3e0':'#ffebee')+';color:'+(b.stock>3?'#2e7d32':b.stock>0?'#e65100':'#c62828')+';">'+(b.stock>0?'库存 '+b.stock:'已借完')+'</span></div>'
+          +'<div class="book-info"><div class="book-title" title="'+b.book_name+'">'+b.book_name+'</div>'
+          +'<div class="book-author">✍️ '+b.author+'</div>'
+          +'<div class="book-author" style="font-size:11px;">📚 '+(b.publisher||'未知出版社')+'</div>'
+          +'<div class="book-meta"><span>📖 借阅 '+b.total_borrows+' 次</span></div></div></div>';
+      }).join("");
+    }
+    renderPagination("pagination",data.page,data.total_pages,loadFavorites);
+  });
+}
+
+function viewDetail(id){window.location.href="student_books.html#book-"+id;}
+
+async function unfav(bookId){
+  if(!confirm("确定取消收藏？"))return;
+  await apiDelete("/api/student/favorites/"+bookId);
+  loadFavorites(1);
+}
+
+loadFavorites(1);
+</script>
+</body>
+</html>

@@ -314,6 +314,72 @@ def submit_review(
     return {"id": r.id, "rating": r.rating, "comment": r.comment, "message": "评分成功"}
 
 
+# ===== 我的收藏 =====
+
+@router.get("/favorites")
+def my_favorites(
+    current_user: dict = Depends(require_student),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """获取当前学生的收藏列表"""
+    from ..dao.favorite_dao import get_user_favorites
+    items, total = get_user_favorites(db, current_user["user_id"], (page - 1) * page_size, page_size)
+    data = []
+    for f in items:
+        book = f.book
+        data.append({
+            "id": f.id, "book_id": f.book_id,
+            "book_name": book.book_name if book else None,
+            "author": book.author if book else None,
+            "category": book.category if book else None,
+            "publisher": book.publisher if book else None,
+            "stock": book.stock if book else 0,
+            "total_borrows": book.total_borrows if book else 0,
+            "cover_url": book.cover_url if book else None,
+            "create_time": f.create_time.isoformat() if f.create_time else None,
+        })
+    return {"items": data, "total": total, "page": page, "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size if total else 0}
+
+
+@router.get("/favorites/ids")
+def my_favorite_ids(
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """获取当前学生收藏的图书ID集合（供前端判断收藏状态）"""
+    from ..dao.favorite_dao import get_user_favorite_ids
+    ids = get_user_favorite_ids(db, current_user["user_id"])
+    return {"ids": list(ids)}
+
+
+@router.post("/favorites", status_code=status.HTTP_201_CREATED)
+def add_favorite(
+    book_id: int = Query(..., gt=0, description="图书ID"),
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """添加收藏"""
+    from ..dao.favorite_dao import add_favorite
+    f = add_favorite(db, current_user["user_id"], book_id)
+    return {"id": f.id, "book_id": f.book_id, "message": "已收藏"}
+
+
+@router.delete("/favorites/{book_id}")
+def remove_favorite(
+    book_id: int,
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """取消收藏（按book_id）"""
+    from ..dao.favorite_dao import remove_favorite
+    if not remove_favorite(db, current_user["user_id"], book_id):
+        raise HTTPException(status_code=404, detail="未收藏该书")
+    return {"message": "已取消收藏"}
+
+
 # ===== 分类 =====
 
 @router.get("/categories")

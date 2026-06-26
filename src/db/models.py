@@ -137,3 +137,16 @@ class SystemConfig(Base):
     config_type = Column(String(16), nullable=False, default="string", comment="值类型: string/int/float/bool")
     description = Column(String(255), nullable=True, comment="配置说明")
     update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment="更新时间")
+
+
+class BookFavorite(Base):
+    """图书收藏表"""
+    __tablename__ = "book_favorite"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("sys_user.id"), nullable=False, comment="用户ID")
+    book_id = Column(Integer, ForeignKey("book.id"), nullable=False, comment="图书ID")
+    create_time = Column(DateTime, default=datetime.now, comment="收藏时间")
+
+    user = relationship("SysUser")
+    book = relationship("Book")
