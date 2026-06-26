@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>系统设置 — 管理后台</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <style>
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid #f0f0f0; }
 .setting-row:last-child { border-bottom:none; }
@@ -39,7 +39,7 @@
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 <script>
 const user=checkAuth();
 if(!user||user.role!=="admin"){alert("仅管理员可访问");window.location.href="login.html";}

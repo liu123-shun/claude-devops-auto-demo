@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>阅读统计 — 学生端</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <style>
 .category-bar{display:flex;align-items:center;gap:10px;margin:6px 0;}
 .category-bar .cat-label{width:70px;font-size:12px;text-align:right;color:#6b8299;font-weight:600;}
@@ -29,7 +29,7 @@
   <div id="stats-container"></div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 <script>
 const user=checkAuth();
 if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}

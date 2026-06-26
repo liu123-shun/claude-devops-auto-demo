@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>馆藏浏览 — 学生端</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <style>
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;}
 .book-card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);overflow:hidden;transition:all .2s;cursor:pointer;display:flex;flex-direction:column;}
@@ -65,7 +65,7 @@
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 <script>
 const user=checkAuth();
 if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
@@ -153,35 +153,54 @@ function loadBooks(page=1){
 function setView(v){currentView=v;document.querySelectorAll(".view-toggle button").forEach(b=>b.classList.toggle("active",b.textContent.includes(v==="grid"?"卡片":"列表")));loadBooks(currentPage);}
 
 async function viewDetail(id){
-  const d=await apiGet("/api/student/books/"+id);
+  var d=await apiGet("/api/student/books/"+id);
   if(!d)return;
   pendingBook=d;
-  document.getElementById("detail-content").innerHTML=`
-    <h3>${d.book_name}</h3>
-    ${d.avg_rating>0?`<div style="font-size:20px;margin:4px 0;">${'★'.repeat(Math.round(d.avg_rating))}${'☆'.repeat(5-Math.round(d.avg_rating))} <span style="font-size:14px;color:#f39c12;font-weight:700;">${d.avg_rating}</span> <span style="font-size:12px;color:#6b8299;">(${d.review_count}条评价)</span></div>`:'<div style="font-size:12px;color:#999;">暂无评分</div>'}
-    <table style="margin-top:10px;"><tr><td style="color:#6b8299;width:70px;">作者</td><td>${d.author}</td></tr>
-    <tr><td style="color:#6b8299;">分类</td><td>${d.category||'-'}</td></tr>
-    <tr><td style="color:#6b8299;">ISBN</td><td>${d.isbn||'-'}</td></tr>
-    <tr><td style="color:#6b8299;">出版社</td><td>${d.publisher||'-'}</td></tr>
-    <tr><td style="color:#6b8299;">库存</td><td><strong style="color:${d.stock>0?'#27ae60':'#e74c3c'};">${d.stock>0?d.stock+' 册':'已借完'}</strong></td></tr>
-    <tr><td style="color:#6b8299;">累计借阅</td><td>${d.total_borrows} 次</td></tr></table>
-    ${d.description?`<p style="margin-top:10px;color:#555;font-size:13px;">📝 ${d.description}</p>`:''}
-    <div style="margin-top:14px;"><strong>💬 评论</strong></div>
-    <div id="review-list" style="max-height:180px;overflow-y:auto;font-size:12px;">${(d.reviews||[]).length?d.reviews.map(function(rv){
-      var isMine = rv.user_name === (user.name || user.username);
-      return '<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;position:relative;"><span style="color:#f39c12;">'+'★'.repeat(rv.rating)+'☆'.repeat(5-rv.rating)+'</span> <strong>'+rv.user_name+'</strong><span style="color:#999;font-size:11px;margin-left:4px;">'+(rv.create_time||'').slice(0,10)+'</span>'+
-        (isMine?'<span style="float:right;font-size:10px;"><a href="#" onclick="event.preventDefault();editMyReview('+rv.id+','+rv.rating+',\''+(rv.comment||'').replace(/'/g,\"\\'\")+'\')" style="color:#4a90d9;margin-right:6px;">编辑</a><a href="#" onclick="event.preventDefault();deleteMyReview('+rv.id+','+d.id+')" style="color:#e74c3c;">删除</a></span>':'')+
-        (rv.comment?'<div style="color:#555;margin-top:2px;">'+rv.comment+'</div>':'')+'</div>';
-    }).join(""):'<span style="color:#999;">暂无评论</span>'}
-</div><div id="review-form" style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;"></div>
-  `;
-
-  // 检查是否可以评分
+  var stars='';if(d.avg_rating>0){stars='★'.repeat(Math.round(d.avg_rating))+'☆'.repeat(5-Math.round(d.avg_rating))+' <span style="font-size:14px;color:#f39c12;font-weight:700;">'+d.avg_rating+'</span> <span style="font-size:12px;color:#6b8299;">('+d.review_count+'条评价)</span>';}
+  else{stars='<span style="font-size:12px;color:#999;">暂无评分</span>';}
+  document.getElementById("detail-content").innerHTML=
+    '<h3>'+d.book_name+'</h3><div style="font-size:20px;margin:4px 0;">'+stars+'</div>'+
+    '<table style="margin-top:10px;"><tr><td style="color:#6b8299;width:70px;">作者</td><td>'+d.author+'</td></tr>'+
+    '<tr><td style="color:#6b8299;">分类</td><td>'+(d.category||'-')+'</td></tr>'+
+    '<tr><td style="color:#6b8299;">ISBN</td><td>'+(d.isbn||'-')+'</td></tr>'+
+    '<tr><td style="color:#6b8299;">出版社</td><td>'+(d.publisher||'-')+'</td></tr>'+
+    '<tr><td style="color:#6b8299;">库存</td><td><strong style="color:'+(d.stock>0?'#27ae60':'#e74c3c')+';">'+(d.stock>0?d.stock+' 册':'已借完')+'</strong></td></tr>'+
+    '<tr><td style="color:#6b8299;">累计借阅</td><td>'+d.total_borrows+' 次</td></tr></table>'+
+    (d.description?'<p style="margin-top:10px;color:#555;font-size:13px;">📝 '+d.description+'</p>':'')+
+    '<div style="margin-top:14px;"><strong>💬 评论</strong></div>'+
+    '<div id="review-list" style="max-height:180px;overflow-y:auto;font-size:12px;"></div>'+
+    '<div id="review-form" style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;"></div>';
+  renderReviewList(d);
   loadReviewForm(d.id);
-  const btn=document.getElementById("detail-borrow-btn");
+  var btn=document.getElementById("detail-borrow-btn");
   if(d.stock>0){btn.style.display="";btn.textContent="📥 立即借阅";}else{btn.style.display="none";}
   openModal("detail-modal");
 }
+
+function renderReviewList(data){
+  var list=document.getElementById("review-list");
+  if(!list)return;
+  var revs=data.reviews||[];
+  if(!revs.length){list.innerHTML='<span style="color:#999;">暂无评论</span>';return;}
+  var html='';
+  for(var i=0;i<revs.length;i++){
+    var rv=revs[i];
+    var isMine=rv.user_name===(user.name||user.username);
+    var comment=rv.comment||'';
+    html+='<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;position:relative;">'+
+      '<span style="color:#f39c12;">'+'★'.repeat(rv.rating)+'☆'.repeat(5-rv.rating)+'</span> <strong>'+rv.user_name+'</strong>'+
+      '<span style="color:#999;font-size:11px;margin-left:4px;">'+(rv.create_time||'').slice(0,10)+'</span>';
+    if(isMine){
+      html+='<span style="float:right;font-size:10px;">'+
+        '<button class="btn btn-outline btn-sm" onclick="editMyReview('+rv.id+','+rv.rating+',event)" style="padding:1px 6px;font-size:10px;margin-right:4px;">编辑</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="deleteMyReview('+rv.id+','+data.id+')" style="padding:1px 6px;font-size:10px;">删除</button></span>';
+    }
+    if(comment){html+='<div style="color:#555;margin-top:2px;">'+comment+'</div>';}
+    html+='</div>';
+  }
+  list.innerHTML=html;
+}
+
 
 async function loadReviewForm(bookId){
   const check=await apiGet("/api/student/reviews/check/"+bookId);
@@ -214,7 +233,7 @@ async function submitReview(bookId){
 }
 
 
-async function editMyReview(reviewId, oldRating, oldComment){
+async function editMyReview(reviewId, oldRating, ev){
   var html = '<div style="font-weight:600;font-size:12px;margin-bottom:6px;">✏️ 修改评价</div><div id="edit-star-picker" style="font-size:22px;cursor:pointer;margin-bottom:4px;">';
   for(var i=1;i<=5;i++){ html += '<span data-s="'+i+'" style="color:'+(i<=oldRating?'#f39c12':'#ddd')+';">★</span>'; }
   html += '</div><textarea id="edit-rv-comment" rows="2" style="width:100%;border:1px solid #dce3ea;border-radius:6px;padding:6px;font-size:12px;">'+(oldComment||'')+'</textarea>';

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>我的收藏 — 学生端</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <style>
 .book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;}
 .book-card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);overflow:hidden;transition:all .2s;cursor:pointer;display:flex;flex-direction:column;position:relative;}
@@ -40,7 +40,7 @@
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 <script>
 var user=checkAuth();
 if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
