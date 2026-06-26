@@ -5,7 +5,6 @@ from ..db.models import SystemConfig
 
 DEFAULTS = {
     "overdue_days":    {"value": "30",  "type": "int",    "desc": "逾期天数阈值：借出超过此天数未归还视为逾期"},
-    "fine_per_day":    {"value": "1",   "type": "float",  "desc": "每天罚金（元）"},
     "max_borrow_count": {"value": "5",  "type": "int",    "desc": "每个学生最多同时借阅数量"},
     "renew_days":      {"value": "15",  "type": "int",    "desc": "续借延长天数"},
     "captcha_enabled":  {"value": "1",  "type": "bool",   "desc": "是否开启验证码：1=开启 0=关闭"},

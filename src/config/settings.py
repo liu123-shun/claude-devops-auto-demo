@@ -26,7 +26,6 @@ PAGE_SIZE: int = 10
 
 # ---- 业务默认值（运行时可被数据库 system_config 表覆盖） ----
 OVERDUE_DAYS: int = 30       # 默认逾期天数
-FINE_PER_DAY: float = 1.0    # 默认每天罚金(元)
 MAX_BORROW_COUNT: int = 5    # 默认最大借书数
 RENEW_DAYS: int = 15         # 默认续借天数
 
