@@ -254,13 +254,22 @@ async def import_books(
 ):
     if not file.filename or not any(file.filename.lower().endswith(ext) for ext in (".csv",)):
         raise HTTPException(status_code=400, detail="仅支持CSV文件")
-    content = (await file.read()).decode("utf-8-sig")
+    raw = await file.read()
+    # 兼容 Windows 系统导出的 GBK 编码 CSV
+    content = None
+    for enc in ("utf-8-sig", "utf-8", "gbk", "gb2312"):
+        try:
+            content = raw.decode(enc); break
+        except Exception:
+            continue
+    if content is None:
+        raise HTTPException(status_code=400, detail="无法识别CSV文件编码，请保存为UTF-8格式")
     reader = csv.DictReader(io.StringIO(content))
     added, skipped, errors = 0, 0, []
     for row_num, row in enumerate(reader, start=2):
         name = (row.get("book_name") or row.get("书名") or "").strip()
         author = (row.get("author") or row.get("作者") or "").strip()
-        if not name or not author: errors.append(f"第{row_num}行书名或作者为空"); skipped += 1; continue
+        if not name or not author: errors.append("第{}行书名或作者为空".format(row_num)); skipped += 1; continue
         stock_str = (row.get("stock") or row.get("库存") or "0").strip()
         try: stock = int(stock_str)
         except: stock = 0
@@ -273,7 +282,7 @@ async def import_books(
             stock=stock,
         )); added += 1
     db.commit()
-    return {"message": f"导入完成：成功{added}本，跳过{skipped}行", "added": added, "skipped": skipped, "errors": errors}
+    return {"message": "导入完成：成功{}本，跳过{}行".format(added, skipped), "added": added, "skipped": skipped, "errors": errors}
 
 
 # ==================== 分类 ====================
@@ -331,13 +340,21 @@ async def import_readers(
 ):
     if not file.filename or not any(file.filename.lower().endswith(ext) for ext in (".csv",)):
         raise HTTPException(status_code=400, detail="仅支持CSV文件")
-    content = (await file.read()).decode("utf-8-sig")
+    raw = await file.read()
+    content = None
+    for enc in ("utf-8-sig", "utf-8", "gbk", "gb2312"):
+        try:
+            content = raw.decode(enc); break
+        except Exception:
+            continue
+    if content is None:
+        raise HTTPException(status_code=400, detail="无法识别CSV文件编码，请保存为UTF-8格式")
     reader = csv.DictReader(io.StringIO(content))
     added, skipped, errors = 0, 0, []
     for row_num, row in enumerate(reader, start=2):
         name = (row.get("student_name") or row.get("name") or row.get("姓名") or row.get("学生姓名") or "").strip()
         username = (row.get("username") or row.get("账号") or "").strip()
-        if not name: errors.append(f"第{row_num}行姓名为空"); skipped += 1; continue
+        if not name: errors.append("第{}行姓名为空".format(row_num)); skipped += 1; continue
         if not username:
             import random, string
             username = "stu" + "".join(random.choices(string.digits, k=6))
@@ -345,13 +362,13 @@ async def import_readers(
         phone = (row.get("phone") or row.get("手机号") or "").strip() or None
         class_name = (row.get("class_name") or row.get("class") or row.get("班级") or "").strip() or None
         existing = db.query(SysUser).filter(SysUser.username == username).first()
-        if existing: errors.append(f"第{row_num}行账号{username}已存在"); skipped += 1; continue
+        if existing: errors.append("第{}行账号{}已存在".format(row_num, username)); skipped += 1; continue
         user = SysUser(username=username, password=auth_service.hash_password(password), role="student", name=name, phone=phone)
         db.add(user); db.flush()
         db.add(Reader(student_name=name, class_=class_name, phone=phone, bind_user_id=user.id))
         added += 1
     db.commit()
-    return {"message": f"导入完成：成功{added}人，跳过{skipped}行", "added": added, "skipped": skipped, "errors": errors}
+    return {"message": "导入完成：成功{}人，跳过{}行".format(added, skipped), "added": added, "skipped": skipped, "errors": errors}
 
 
 # ==================== 借阅管理 ====================
