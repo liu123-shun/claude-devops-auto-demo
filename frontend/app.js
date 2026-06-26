@@ -178,6 +178,7 @@ function renderSidebar(role) {
             { group: "主菜单", items: [
                 { href: "student_index.html", icon: "&#x1F4CA;", label: "我的首页" },
                 { href: "student_books.html", icon: "&#x1F4DA;", label: "馆藏浏览" },
+                { href: "student_charts.html", icon: "&#x1F4C8;", label: "数据可视化" },
             ]},
             { group: "我的记录", items: [
                 { href: "student_my_borrow.html", icon: "&#x1F4D6;", label: "我的借阅" },

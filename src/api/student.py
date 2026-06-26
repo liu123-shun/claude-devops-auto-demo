@@ -100,6 +100,95 @@ def my_reading_stats(
     }
 
 
+@router.get("/charts")
+def my_charts(
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """学生个人可视化数据：分类饼图、月度柱状折线、周热力散点、借还对比、阅读日历热力图"""
+    from datetime import datetime, timedelta
+    import math
+    reader_id = _get_student_reader_id(db, current_user["user_id"])
+    now = datetime.now()
+
+    if reader_id == 0:
+        return {"categories": {"labels":[],"data":[]}, "monthly": {"labels":[],"borrow":[],"return":[]},
+                "weekly_heat": {"labels":[],"data":[]}, "borrow_vs_return": {"labels":[],"borrow":[],"return":[]},
+                "calendar_heat": [], "rating_dist": {"labels":[],"data":[]}}
+
+    # ---- 1) 分类饼图 ----
+    cats = db.query(Book.category, func.count(Book.id)).join(
+        BorrowRecord, BorrowRecord.book_id == Book.id
+    ).filter(BorrowRecord.reader_id == reader_id, Book.category.isnot(None), Book.category != ""
+    ).group_by(Book.category).all()
+    pie_labels = [c for c,_ in cats]; pie_data = [n for _,n in cats]
+
+    # ---- 2) 月度借还趋势(12个月) ----
+    mlabels=[]; mborrow=[]; mreturn=[]
+    for i in range(11, -1, -1):
+        s = (now.replace(day=1) - timedelta(days=30*i)).replace(day=1)
+        e = (s.replace(day=28)+timedelta(days=4)).replace(day=1) if s.month==12 else s.replace(month=s.month+1, day=1)
+        mlabels.append(s.strftime("%Y-%m"))
+        mborrow.append(db.query(BorrowRecord).filter(BorrowRecord.reader_id==reader_id, BorrowRecord.borrow_time>=s, BorrowRecord.borrow_time<e).count())
+        mreturn.append(db.query(BorrowRecord).filter(BorrowRecord.reader_id==reader_id, BorrowRecord.return_time>=s, BorrowRecord.return_time<e).count())
+
+    # ---- 3) 周热力(散点数据: 最近90天, 每天借阅数) ----
+    wlabels=["周一","周二","周三","周四","周五","周六","周日"]
+    wdata=[0]*7; wrdata=[0]*7
+    cutoff = now - timedelta(days=90)
+    records_90d = db.query(BorrowRecord).filter(BorrowRecord.reader_id==reader_id, BorrowRecord.borrow_time>=cutoff).all()
+    for r in records_90d:
+        if r.borrow_time: wdata[r.borrow_time.weekday()] += 1
+        if r.return_time and r.return_time>=cutoff: wrdata[r.return_time.weekday()] += 1
+
+    # ---- 4) 借还对比 ----
+    blabels=["借阅","归还"]
+    total_borrow_count = db.query(BorrowRecord).filter(BorrowRecord.reader_id==reader_id).count()
+    total_return_count = db.query(BorrowRecord).filter(BorrowRecord.reader_id==reader_id, BorrowRecord.return_time.isnot(None)).count()
+
+    # ---- 5) 阅读日历热力图(最近60天每天) ----
+    calendar_data = []
+    for i in range(59, -1, -1):
+        day = now - timedelta(days=i)
+        cnt = db.query(BorrowRecord).filter(BorrowRecord.reader_id==reader_id,
+            func.date(BorrowRecord.borrow_time)==day.date()).count()
+        calendar_data.append({"date": day.strftime("%Y-%m-%d"), "count": cnt, "weekday": day.weekday()})
+
+    # ---- 6) 评分分布 ----
+    from ..dao.review_dao import get_user_review, get_book_reviews
+    from ..db.models import BookReview
+    my_ratings = db.query(BookReview.rating, func.count(BookReview.id)).filter(
+        BookReview.user_id==current_user["user_id"]
+    ).group_by(BookReview.rating).all()
+    rating_map = {1:0,2:0,3:0,4:0,5:0}
+    for r,c in my_ratings: rating_map[r]=c
+    rlabels = ["1星","2星","3星","4星","5星"]; rdata = [rating_map[i] for i in range(1,6)]
+
+    # ---- 7) 借阅时长分布(已还的书) ----
+    returned = db.query(BorrowRecord).filter(
+        BorrowRecord.reader_id==reader_id, BorrowRecord.return_time.isnot(None)).all()
+    days_list = []
+    for r in returned:
+        if r.borrow_time and r.return_time:
+            days_list.append((r.return_time - r.borrow_time).days)
+    dur_labels=["0-7天","8-14天","15-30天","30天+"]; dur_data=[0,0,0,0]
+    for d in days_list:
+        if d<=7: dur_data[0]+=1
+        elif d<=14: dur_data[1]+=1
+        elif d<=30: dur_data[2]+=1
+        else: dur_data[3]+=1
+
+    return {
+        "categories": {"labels": pie_labels, "data": pie_data},
+        "monthly": {"labels": mlabels, "borrow": mborrow, "return": mreturn},
+        "weekly_heat": {"labels": wlabels, "borrow": wdata, "return": wrdata},
+        "borrow_vs_return": {"labels": blabels, "borrow": total_borrow_count, "return": total_return_count},
+        "calendar_heat": calendar_data,
+        "rating_dist": {"labels": rlabels, "data": rdata},
+        "duration": {"labels": dur_labels, "data": dur_data},
+    }
+
+
 @router.put("/profile")
 def update_my_profile(
     phone: str = Query(None, max_length=32),

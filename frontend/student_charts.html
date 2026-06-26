@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>数据可视化 — 学生端</title>
+<link rel="stylesheet" href="style.css?v=2">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+canvas{max-height:300px}
+.chart-card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:18px}
+.chart-card h3{font-size:14px;margin-bottom:10px;color:#2c3e50}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.kpi-item{background:linear-gradient(135deg,var(--c1),var(--c2));color:#fff;border-radius:10px;padding:14px;text-align:center}
+.kpi-item .val{font-size:26px;font-weight:700}.kpi-item .lbl{font-size:10px;opacity:.85}
+.heat-cal{display:flex;flex-wrap:wrap;gap:4px;max-width:800px}
+.heat-day{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;cursor:default;transition:transform .15s}
+.heat-day:hover{transform:scale(1.3);z-index:2}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="logo">📚 图书借阅管理系统 · 学生端</div><div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div></div>
+<div class="sidebar" id="sidebar"></div>
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 数据可视化</div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Row 1 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:16px">
+    <div class="chart-card"><h3>🍩 阅读分类分布（饼图）</h3><div class="chart-wrap"><canvas id="cPie"></canvas></div></div>
+    <div class="chart-card"><h3>📊 月度借还趋势（折线图）</h3><div class="chart-wrap"><canvas id="cMonthly"></canvas></div></div>
+  </div>
+  <!-- Row 2 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:16px">
+    <div class="chart-card"><h3>🔥 每周借阅热度（柱状图）</h3><div class="chart-wrap"><canvas id="cWeekly"></canvas></div></div>
+    <div class="chart-card"><h3>📦 借阅时长分布（直方图）</h3><div class="chart-wrap"><canvas id="cDuration"></canvas></div></div>
+  </div>
+  <!-- Row 3 -->
+  <div class="chart-row chart-col-2" style="margin-bottom:16px">
+    <div class="chart-card"><h3>⭐ 评分分布（柱状图）</h3><div class="chart-wrap"><canvas id="cRating"></canvas></div></div>
+    <div class="chart-card"><h3>⚖️ 借还对比（饼图）</h3><div class="chart-wrap"><canvas id="cBvR"></canvas></div></div>
+  </div>
+  <!-- Row 4: 日历热力图 -->
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>🗓️ 近60天阅读日历（热力图）</h3>
+    <div id="calendar-heat" class="heat-cal" style="margin-top:8px"></div>
+    <div style="font-size:10px;color:#999;margin-top:6px;display:flex;gap:10px;align-items:center">
+      <span>少</span><span style="width:14px;height:14px;border-radius:3px;background:#e8f0fe"></span>
+      <span style="width:14px;height:14px;border-radius:3px;background:#b3d4ff"></span>
+      <span style="width:14px;height:14px;border-radius:3px;background:#5a9fd4"></span>
+      <span style="width:14px;height:14px;border-radius:3px;background:#1a5276"></span><span>多</span>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=2"></script>
+<script>
+var user=checkAuth();
+if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
+displayUserInfo();renderSidebar("student");
+
+var COLORS=['#4a90d9','#27ae60','#f39c12','#e74c3c','#9b59b6','#1abc9c','#e67e22','#3498db'];
+var CALPHA=['rgba(74,144,217,.7)','rgba(39,174,96,.7)','rgba(243,156,18,.7)','rgba(231,76,60,.7)','rgba(155,89,182,.7)','rgba(26,188,156,.7)'];
+
+async function init(){
+  var d=await apiGet("/api/student/charts");
+  if(!d)return;
+
+  // KPI counts
+  var totalB=0;d.monthly.borrow.forEach(function(v){totalB+=v});
+  var totalR=0;d.monthly["return"].forEach(function(v){totalR+=v});
+  var activeB=totalB-totalR;
+  var calCounts=d.calendar_heat.map(function(c){return c.count});
+  var maxCal=Math.max.apply(null,calCounts);
+
+  document.getElementById("kpi-grid").innerHTML=
+    '<div class="kpi-item" style="--c1:#4a90d9;--c2:#6db3f2"><div class="val">'+totalB+'</div><div class="lbl">累计借阅</div></div>'+
+    '<div class="kpi-item" style="--c1:#27ae60;--c2:#2ecc71"><div class="val">'+totalR+'</div><div class="lbl">累计归还</div></div>'+
+    '<div class="kpi-item" style="--c1:#f39c12;--c2:#f1c40f"><div class="val">'+activeB+'</div><div class="lbl">当前在借</div></div>'+
+    '<div class="kpi-item" style="--c1:#9b59b6;--c2:#a569bd"><div class="val">'+(d.rating_dist.data.reduce(function(a,b){return a+b},0))+'</div><div class="lbl">已评分</div></div>'+
+    '<div class="kpi-item" style="--c1:#e67e22;--c2:#f39c12"><div class="val">'+(d.categories.labels.length)+'</div><div class="lbl">阅读分类</div></div>';
+
+  // Pie chart - category
+  if(d.categories.labels.length){
+    new Chart(document.getElementById("cPie"),{type:"doughnut",data:{labels:d.categories.labels,datasets:[{data:d.categories.data,backgroundColor:COLORS.slice(0,d.categories.labels.length),borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,plugins:{legend:{position:"right",labels:{font:{size:10}}}}}});
+  }
+
+  // Monthly line
+  new Chart(document.getElementById("cMonthly"),{type:"line",data:{labels:d.monthly.labels,datasets:[
+    {label:"借阅",data:d.monthly.borrow,borderColor:"#4a90d9",backgroundColor:"rgba(74,144,217,.1)",fill:true,tension:.4,pointRadius:3},
+    {label:"归还",data:d.monthly["return"],borderColor:"#27ae60",backgroundColor:"rgba(39,174,96,.1)",fill:true,tension:.4,pointRadius:3}
+  ]},options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // Weekly bar
+  new Chart(document.getElementById("cWeekly"),{type:"bar",data:{labels:d.weekly_heat.labels,datasets:[
+    {label:"借阅",data:d.weekly_heat.borrow,backgroundColor:"rgba(74,144,217,.75)",borderColor:"#4a90d9",borderWidth:1,borderRadius:4},
+    {label:"归还",data:d.weekly_heat["return"],backgroundColor:"rgba(39,174,96,.75)",borderColor:"#27ae60",borderWidth:1,borderRadius:4}
+  ]},options:{responsive:true,scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // Duration histogram
+  new Chart(document.getElementById("cDuration"),{type:"bar",data:{labels:d.duration.labels,datasets:[{label:"本数",data:d.duration.data,backgroundColor:["#e8f5e9","#c8e6c9","#a5d6a7","#81c784"],borderColor:["#27ae60","#27ae60","#2e7d32","#2e7d32"],borderWidth:2,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // Rating distribution
+  new Chart(document.getElementById("cRating"),{type:"bar",data:{labels:d.rating_dist.labels,datasets:[{label:"次数",data:d.rating_dist.data,backgroundColor:["#ffcdd2","#ef9a9a","#ffe082","#a5d6a7","#81c784"],borderColor:["#e74c3c","#e74c3c","#f39c12","#27ae60","#2e7d32"],borderWidth:2,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // Borrow vs Return pie
+  new Chart(document.getElementById("cBvR"),{type:"doughnut",data:{labels:["借阅","归还"],datasets:[{data:[totalB,totalR],backgroundColor:["rgba(74,144,217,.8)","rgba(39,174,96,.8)"],borderColor:["#4a90d9","#27ae60"],borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:11}}}}}});
+
+  // Calendar heatmap
+  var calHtml="";var weekLabels='<div style="display:flex;gap:4px;font-size:9px;color:#999;margin-bottom:4px;padding-left:24px">';
+  ["一","二","三","四","五","六","日"].forEach(function(w){weekLabels+='<span style="width:28px;text-align:center">'+w+'</span>'});
+  weekLabels+='</div>';
+  d.calendar_heat.forEach(function(c){
+    var intensity=0;if(maxCal>0)intensity=Math.min(1,c.count/maxCal);
+    var r=Math.round(26+206*(1-intensity)),g=Math.round(83+133*(1-intensity)),b=Math.round(163+28*(1-intensity));
+    calHtml+='<div class="heat-day" style="background:rgb('+r+','+g+','+b+')" title="'+c.date+' 借阅:'+c.count+'本">'+(c.count||"")+'</div>';
+  });
+  document.getElementById("calendar-heat").innerHTML=weekLabels+calHtml;
+}
+init();
+</script>
+</body>
+</html>
