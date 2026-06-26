@@ -25,6 +25,7 @@
         <button class="btn btn-primary btn-sm" onclick="searchBooks()">搜索</button><button class="btn btn-outline btn-sm" onclick="exportBooksCSV()">📥 导出CSV</button>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 新增图书</button>
+      <button class="btn btn-outline btn-sm" onclick="openImportBookModal()">📥 批量导入</button>
     </div>
     <div class="table-wrap"><table><thead><tr><th>ID</th><th>书名</th><th>作者</th><th>分类</th><th>ISBN</th><th>库存</th><th>借阅</th><th>操作</th></tr></thead><tbody id="book-tbody"></tbody></table></div>
     <div id="empty-state" class="empty-state" style="display:none;">暂无图书数据</div>
@@ -51,6 +52,26 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('book-modal')">取消</button>
       <button class="btn btn-primary" onclick="saveBook()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 导入弹窗 -->
+<div class="modal-overlay" id="import-book-modal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">📥 批量导入图书<button class="modal-close" onclick="closeModal('import-book-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px;">
+        <a href="#" onclick="downloadBookTemplate()" style="color:#4a90d9;font-size:12px;">📄 下载CSV模板</a>
+        <span style="color:#999;font-size:11px;margin-left:8px;">表头: book_name,author,category,isbn,publisher,description,stock</span>
+      </div>
+      <div class="form-group"><label>选择CSV文件</label><input type="file" id="book-import-file" accept=".csv" style="padding:6px;"></div>
+      <div id="import-book-error" class="login-error"></div>
+      <div id="import-book-result" style="display:none;background:#e8f5e9;color:#2e7d32;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('import-book-modal')">取消</button>
+      <button class="btn btn-primary" onclick="importBooks()">开始导入</button>
     </div>
   </div>
 </div>
@@ -198,6 +219,42 @@ function exportBooksCSV() {
     exportCSV("图书列表", ["ID","书名","作者","分类","ISBN","出版社","库存","借阅次数","入库时间"],
         allBooksData.map(function(b){ return [b.id,b.book_name,b.author,b.category||"",b.isbn||"",b.publisher||"",b.stock,b.total_borrows||0,(b.create_time||"").slice(0,10)]; }));
 }
+
+function openImportBookModal(){
+  document.getElementById("import-book-error").style.display="none";
+  document.getElementById("import-book-result").style.display="none";
+  document.getElementById("book-import-file").value="";
+  openModal("import-book-modal");
+}
+
+function downloadBookTemplate(){
+  var bom="﻿";
+  var csv=bom+"book_name,author,category,isbn,publisher,description,stock\n";
+  csv+="Python高级编程,李华,计算机,9787111555292,机械工业出版社,进阶读物,5\n";
+  csv+="数据结构,王明,计算机,9787302517875,清华大学出版社,经典教材,8\n";
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="图书导入模板.csv"; a.click();
+}
+
+async function importBooks(){
+  var fileEl=document.getElementById("book-import-file");
+  var errEl=document.getElementById("import-book-error");
+  var resultEl=document.getElementById("import-book-result");
+  errEl.style.display="none"; resultEl.style.display="none";
+  var file=fileEl.files[0];
+  if(!file){errEl.textContent="请选择CSV文件";errEl.style.display="block";return;}
+  var formData=new FormData(); formData.append("file",file);
+  try{
+    var res=await fetch("/api/admin/books/import",{method:"POST",headers:{Authorization:"Bearer "+getToken()},body:formData});
+    var data=await res.json();
+    if(res.ok){
+      resultEl.textContent=data.message+(data.errors&&data.errors.length?" 注意: "+data.errors.join("; "):"");
+      resultEl.style.display="block";
+      searchBooks(1);
+    }else{errEl.textContent=data.detail||"导入失败";errEl.style.display="block";}
+  }catch(e){errEl.textContent="网络连接失败";errEl.style.display="block";}
+}
+
 </script>
 </body>
 </html>

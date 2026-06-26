@@ -27,6 +27,7 @@
         <button class="btn btn-primary btn-sm" onclick="searchReaders()">搜索</button><button class="btn btn-outline btn-sm" onclick="exportReadersCSV()">📥 导出CSV</button>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 新增学生</button>
+        <button class="btn btn-outline btn-sm" onclick="openImportReaderModal()">📥 批量导入</button>
     </div>
 
     <div class="table-wrap">
@@ -60,6 +61,25 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="import-reader-modal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">📥 批量导入学生<button class="modal-close" onclick="closeModal('import-reader-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px;">
+        <a href="#" onclick="downloadReaderTemplate()" style="color:#4a90d9;font-size:12px;">📄 下载CSV模板</a>
+        <span style="color:#999;font-size:11px;margin-left:8px;">表头: name,username,password,phone,class（密码默认123456）</span>
+      </div>
+      <div class="form-group"><label>选择CSV文件</label><input type="file" id="reader-import-file" accept=".csv" style="padding:6px;"></div>
+      <div id="import-reader-error" class="login-error"></div>
+      <div id="import-reader-result" style="display:none;background:#e8f5e9;color:#2e7d32;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:8px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('import-reader-modal')">取消</button>
+      <button class="btn btn-primary" onclick="importReaders()">开始导入</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
     <div class="modal-header">⚠️ 确认删除<span class="modal-close" onclick="closeModal('delete-modal')">&times;</span></div>
@@ -77,7 +97,6 @@ const user = checkAuth();
 if (!user || user.role !== "admin") { alert("仅管理员可访问"); window.location.href = "login.html"; }
 displayUserInfo();
 renderSidebar("admin");
-var allReadersData = [];
 var allReadersData = [];
 
 let currentPage = 1;
@@ -171,6 +190,42 @@ function exportReadersCSV() {
     exportCSV("学生列表", ["ID","姓名","班级","手机号","绑定账号ID"],
         allReadersData.map(function(r){ return [r.id,r.student_name,r.class_||"",r.phone||"",r.bind_user_id||""]; }));
 }
+
+function openImportReaderModal(){
+  document.getElementById("import-reader-error").style.display="none";
+  document.getElementById("import-reader-result").style.display="none";
+  document.getElementById("reader-import-file").value="";
+  openModal("import-reader-modal");
+}
+
+function downloadReaderTemplate(){
+  var bom="﻿";
+  var csv=bom+"name,username,password,phone,class\n";
+  csv+="陈小明,chenxm,123456,13900001001,软件工程2024-3班\n";
+  csv+="林小红,linxh,123456,13900001002,计算机科学2024-2班\n";
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="学生导入模板.csv"; a.click();
+}
+
+async function importReaders(){
+  var fileEl=document.getElementById("reader-import-file");
+  var errEl=document.getElementById("import-reader-error");
+  var resultEl=document.getElementById("import-reader-result");
+  errEl.style.display="none"; resultEl.style.display="none";
+  var file=fileEl.files[0];
+  if(!file){errEl.textContent="请选择CSV文件";errEl.style.display="block";return;}
+  var formData=new FormData(); formData.append("file",file);
+  try{
+    var res=await fetch("/api/admin/readers/import",{method:"POST",headers:{Authorization:"Bearer "+getToken()},body:formData});
+    var data=await res.json();
+    if(res.ok){
+      resultEl.textContent=data.message+(data.errors&&data.errors.length?" 注意: "+data.errors.join("; "):"");
+      resultEl.style.display="block";
+      searchReaders(1);
+    }else{errEl.textContent=data.detail||"导入失败";errEl.style.display="block";}
+  }catch(e){errEl.textContent="网络连接失败";errEl.style.display="block";}
+}
+
 </script>
 </body>
 </html>

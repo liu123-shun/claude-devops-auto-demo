@@ -11,7 +11,9 @@
 """
 
 from datetime import datetime
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+import csv
+import io
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -245,6 +247,35 @@ def delete_book(book_id: int, db: Session = Depends(get_db)):
     return {"message": "删除成功"}
 
 
+@router.post("/books/import")
+async def import_books(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    if not file.filename or not any(file.filename.lower().endswith(ext) for ext in (".csv",)):
+        raise HTTPException(status_code=400, detail="仅支持CSV文件")
+    content = (await file.read()).decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(content))
+    added, skipped, errors = 0, 0, []
+    for row_num, row in enumerate(reader, start=2):
+        name = (row.get("book_name") or row.get("书名") or "").strip()
+        author = (row.get("author") or row.get("作者") or "").strip()
+        if not name or not author: errors.append(f"第{row_num}行书名或作者为空"); skipped += 1; continue
+        stock_str = (row.get("stock") or row.get("库存") or "0").strip()
+        try: stock = int(stock_str)
+        except: stock = 0
+        db.add(Book(
+            book_name=name, author=author,
+            category=(row.get("category") or row.get("分类") or "").strip() or None,
+            isbn=(row.get("isbn") or row.get("ISBN") or "").strip() or None,
+            publisher=(row.get("publisher") or row.get("出版社") or "").strip() or None,
+            description=(row.get("description") or row.get("简介") or "").strip() or None,
+            stock=stock,
+        )); added += 1
+    db.commit()
+    return {"message": f"导入完成：成功{added}本，跳过{skipped}行", "added": added, "skipped": skipped, "errors": errors}
+
+
 # ==================== 分类 ====================
 
 @router.get("/categories")
@@ -291,6 +322,36 @@ def delete_reader(reader_id: int, db: Session = Depends(get_db)):
     if not reader_service.remove_reader(db, reader_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="读者不存在")
     return {"message": "删除成功"}
+
+
+@router.post("/readers/import")
+async def import_readers(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    if not file.filename or not any(file.filename.lower().endswith(ext) for ext in (".csv",)):
+        raise HTTPException(status_code=400, detail="仅支持CSV文件")
+    content = (await file.read()).decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(content))
+    added, skipped, errors = 0, 0, []
+    for row_num, row in enumerate(reader, start=2):
+        name = (row.get("student_name") or row.get("name") or row.get("姓名") or row.get("学生姓名") or "").strip()
+        username = (row.get("username") or row.get("账号") or "").strip()
+        if not name: errors.append(f"第{row_num}行姓名为空"); skipped += 1; continue
+        if not username:
+            import random, string
+            username = "stu" + "".join(random.choices(string.digits, k=6))
+        password = (row.get("password") or row.get("密码") or "123456").strip()
+        phone = (row.get("phone") or row.get("手机号") or "").strip() or None
+        class_name = (row.get("class_name") or row.get("class") or row.get("班级") or "").strip() or None
+        existing = db.query(SysUser).filter(SysUser.username == username).first()
+        if existing: errors.append(f"第{row_num}行账号{username}已存在"); skipped += 1; continue
+        user = SysUser(username=username, password=auth_service.hash_password(password), role="student", name=name, phone=phone)
+        db.add(user); db.flush()
+        db.add(Reader(student_name=name, class_=class_name, phone=phone, bind_user_id=user.id))
+        added += 1
+    db.commit()
+    return {"message": f"导入完成：成功{added}人，跳过{skipped}行", "added": added, "skipped": skipped, "errors": errors}
 
 
 # ==================== 借阅管理 ====================
