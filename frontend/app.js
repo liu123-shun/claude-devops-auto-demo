@@ -185,6 +185,9 @@ function renderSidebar(role) {
                 { href: "student_stats.html", icon: "&#x1F4C8;", label: "阅读统计" },
                 { href: "student_my_login_log.html", icon: "&#x1F4DD;", label: "登录日志" },
             ]},
+            { group: "账户", items: [
+                { href: "student_profile.html", icon: "&#x1F464;", label: "个人中心" },
+            ]},
         ];
     }
 

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心 — 学生端</title>
+<link rel="stylesheet" href="style.css?v=2">
+<style>
+.profile-header{display:flex;align-items:center;gap:20px;padding:20px;background:linear-gradient(135deg,#4a90d9,#6db3f2);border-radius:12px;color:#fff;margin-bottom:20px;flex-wrap:wrap;}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;flex-shrink:0;}
+.profile-meta{flex:1;min-width:180px;}
+.profile-meta .pm-name{font-size:22px;font-weight:700;}
+.profile-meta .pm-role{font-size:13px;opacity:.8;margin-top:2px;}
+.profile-meta .pm-misc{font-size:12px;opacity:.7;margin-top:4px;}
+.profile-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.profile-form .pf-full{grid-column:1/-1;}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:13px;}
+.info-row .info-label{color:#6b8299;font-weight:600;width:100px;}
+.info-row .info-value{flex:1;color:#2c3e50;}
+.pwd-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">📚 图书借阅管理系统 · 学生端</div>
+  <div class="user-info"><span>👤 <span id="display-name"></span></span><button onclick="logout()">退出登录</button></div>
+</div>
+<div class="sidebar" id="sidebar"></div>
+<div class="main-content">
+  <div class="breadcrumb">🏠 首页 / 个人中心</div>
+
+  <div class="profile-header" id="profile-header"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <!-- 个人信息编辑 -->
+    <div class="card">
+      <div class="card-title">✏️ 个人资料</div>
+      <div class="profile-form">
+        <div class="form-group"><label>账号</label><input type="text" id="pf-username" disabled style="background:#f5f5f5;color:#999;"></div>
+        <div class="form-group"><label>真实姓名</label><input type="text" id="pf-name" disabled style="background:#f5f5f5;color:#999;"></div>
+        <div class="form-group"><label>手机号</label><input type="text" id="pf-phone" placeholder="请输入手机号"></div>
+        <div class="form-group"><label>班级</label><input type="text" id="pf-class" placeholder="请输入班级"></div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+        <button class="btn btn-primary" onclick="saveProfile()">💾 保存资料</button>
+      </div>
+      <div id="profile-msg" class="save-msg"></div>
+    </div>
+
+    <!-- 修改密码 + 账号信息 -->
+    <div>
+      <div class="card">
+        <div class="card-title">🔑 修改密码</div>
+        <div class="pwd-form">
+          <div class="form-group"><label>原密码</label><input type="password" id="pwd-old"></div>
+          <div class="form-group"><label>新密码</label><input type="password" id="pwd-new"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="changePassword()">确认修改</button>
+        </div>
+        <div id="pwd-msg" class="save-msg"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 账号信息</div>
+        <div id="account-info"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>.save-msg{padding:8px 12px;border-radius:6px;font-size:12px;margin-top:8px;display:none;}</style>
+
+<script src="app.js?v=2"></script>
+<script>
+var user=checkAuth();
+if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
+displayUserInfo();
+renderSidebar("student");
+
+async function init(){
+  var pf=await apiGet("/api/student/profile");
+  if(!pf)return;
+
+  // Header
+  document.getElementById("profile-header").innerHTML=
+    '<div class="profile-avatar">'+(pf.name||pf.username||"?").charAt(0)+'</div>'
+    +'<div class="profile-meta"><div class="pm-name">'+(pf.name||pf.username)+'</div>'
+    +'<div class="pm-role">🎓 学生</div>'
+    +'<div class="pm-misc">'+ (pf.reader&&pf.reader.class ? pf.reader.class : '未设置班级') +' · '+(pf.reader&&pf.reader.phone ? pf.reader.phone : '未设置手机')+'</div></div>';
+
+  // Form fields
+  document.getElementById("pf-username").value=pf.username||"";
+  document.getElementById("pf-name").value=pf.name||"";
+  document.getElementById("pf-phone").value=(pf.reader&&pf.reader.phone)||"";
+  document.getElementById("pf-class").value=(pf.reader&&pf.reader.class)||"";
+
+  // Account info
+  document.getElementById("account-info").innerHTML=
+    '<div class="info-row"><span class="info-label">账号ID</span><span class="info-value">'+pf.user_id+'</span></div>'
+    +'<div class="info-row"><span class="info-label">登录账号</span><span class="info-value">'+pf.username+'</span></div>'
+    +'<div class="info-row"><span class="info-label">真实姓名</span><span class="info-value">'+pf.name+'</span></div>'
+    +'<div class="info-row"><span class="info-label">角色</span><span class="info-value">🎓 学生</span></div>'
+    +'<div class="info-row"><span class="info-label">班级</span><span class="info-value">'+(pf.reader&&pf.reader.class ? pf.reader.class:'<span style="color:#999;">未设置</span>')+'</span></div>'
+    +'<div class="info-row"><span class="info-label">手机号</span><span class="info-value">'+(pf.reader&&pf.reader.phone ? pf.reader.phone:'<span style="color:#999;">未设置</span>')+'</span></div>';
+}
+
+async function saveProfile(){
+  var phone=document.getElementById("pf-phone").value.trim();
+  var cls=document.getElementById("pf-class").value.trim();
+  var u="/api/student/profile";if(phone)u+="?phone="+encodeURIComponent(phone);if(cls)u+=(phone?"&":"?")+"class_name="+encodeURIComponent(cls);
+  var r=await fetch(u,{method:"PUT",headers:{Authorization:"Bearer "+getToken()}});
+  if(r.ok){
+    var msg=document.getElementById("profile-msg");msg.textContent="✅ 资料更新成功";msg.style.background="#e8f5e9";msg.style.color="#2e7d32";msg.style.display="block";
+    setTimeout(function(){msg.style.display="none";},3000);
+    init();
+  }
+}
+
+async function changePassword(){
+  var o=document.getElementById("pwd-old").value,n=document.getElementById("pwd-new").value;
+  var msg=document.getElementById("pwd-msg");
+  if(!o||!n){msg.textContent="请填写完整";msg.style.background="#fff0f0";msg.style.color="#c62828";msg.style.display="block";return}
+  var r=await fetch("/api/student/change-password?old_password="+encodeURIComponent(o)+"&new_password="+encodeURIComponent(n),{method:"PUT",headers:{Authorization:"Bearer "+getToken()}});
+  if(r.ok){
+    msg.textContent="✅ 密码修改成功！下次登录请用新密码";msg.style.background="#e8f5e9";msg.style.color="#2e7d32";msg.style.display="block";
+    document.getElementById("pwd-old").value="";document.getElementById("pwd-new").value="";
+  }else{
+    var d=await r.json();msg.textContent=(d.detail||"修改失败");msg.style.background="#fff0f0";msg.style.color="#c62828";msg.style.display="block";
+  }
+}
+
+init();
+</script>
+</body>
+</html>
