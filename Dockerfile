@@ -7,8 +7,8 @@ FROM python:3.11-alpine
 # 定义国内阿里云pip镜像源
 ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
-# 安装 MySQL 客户端依赖（pymysql 需要）
-RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
+# 安装编译依赖（pymysql + Pillow 需要）
+RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev zlib-dev jpeg-dev
 
 # 设置工作目录
 WORKDIR /app
