@@ -24,6 +24,73 @@
     --sidebar-width: 220px;
 }
 
+/* ---- 深色模式 ---- */
+[data-theme="dark"] {
+    --primary: #5a9fd4;
+    --primary-dark: #4a90d9;
+    --primary-light: #1e2d3d;
+    --bg: #1a1d23;
+    --card: #242830;
+    --text: #d0d5dd;
+    --text-light: #8b95a5;
+    --border: #333840;
+    --shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+[data-theme="dark"] .sidebar { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .sidebar a { color: var(--text); }
+[data-theme="dark"] .sidebar a:hover, [data-theme="dark"] .sidebar a.active { background: var(--primary-light); color: var(--primary); }
+[data-theme="dark"] table th { background: #1e2130; color: var(--text-light); }
+[data-theme="dark"] table tbody tr:hover { background: #2a2e38; }
+[data-theme="dark"] .toolbar input, [data-theme="dark"] .toolbar select,
+[data-theme="dark"] .form-group input, [data-theme="dark"] .form-group select,
+[data-theme="dark"] .form-group textarea { background: #2a2e38; border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .btn-outline { border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .btn-outline:hover { background: var(--bg); }
+[data-theme="dark"] .modal { background: var(--card); }
+[data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { border-color: var(--border); }
+[data-theme="dark"] .stat-card, [data-theme="dark"] .card { background: var(--card); }
+[data-theme="dark"] .book-card { background: var(--card); }
+[data-theme="dark"] .setting-row { border-color: var(--border); }
+[data-theme="dark"] .setting-info .key { color: var(--text); }
+[data-theme="dark"] .setting-input input, [data-theme="dark"] .setting-input select { background: #2a2e38; border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .info-row { border-color: var(--border); }
+[data-theme="dark"] .info-row .info-value { color: var(--text); }
+[data-theme="dark"] .chart-card { background: var(--card); }
+[data-theme="dark"] .chart-card h3 { color: var(--text); }
+[data-theme="dark"] .kpi-item { }
+[data-theme="dark"] .book-card.out-of-stock .book-cover { background: linear-gradient(135deg, #2a2e38, #1e2130); }
+[data-theme="dark"] .book-cover { background: linear-gradient(135deg, #2a3040, #1e2535); }
+[data-theme="dark"] .empty-state { color: var(--text-light); }
+[data-theme="dark"] .tag-green { background: #1a3d2a; color: #4caf50; }
+[data-theme="dark"] .tag-yellow { background: #3d2e0f; color: #ff9800; }
+[data-theme="dark"] .tag-red { background: #3d1a1a; color: #ef5350; }
+[data-theme="dark"] .login-card { background: var(--card); }
+[data-theme="dark"] .role-tabs { background: var(--bg); }
+[data-theme="dark"] .role-tab { color: var(--text-light); }
+[data-theme="dark"] .role-tab.active { background: var(--card); color: var(--primary); }
+[data-theme="dark"] .stats-item { background: #1e2130; }
+[data-theme="dark"] .stats-item .lbl { color: var(--text-light); }
+[data-theme="dark"] .ann-card { background: #1e2535; border-left-color: var(--primary); }
+[data-theme="dark"] .ann-card:hover { background: #263048; }
+[data-theme="dark"] .quick-action { background: #1e2130; color: var(--text); }
+[data-theme="dark"] .quick-action:hover { background: var(--primary-light); }
+[data-theme="dark"] .tab-nav { background: #1e2130; }
+[data-theme="dark"] .tab-btn { color: var(--text-light); }
+[data-theme="dark"] .tab-btn.active { background: var(--card); color: var(--primary); }
+[data-theme="dark"] .profile-header { }
+[data-theme="dark"] .hot-item { border-color: var(--border); }
+[data-theme="dark"] .activity-item { border-color: var(--border); }
+[data-theme="dark"] .pagination button { background: var(--card); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] input[disabled] { background: #1e2130 !important; color: #666 !important; }
+[data-theme="dark"] textarea { background: #2a2e38; border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .fav-star-btn { background: rgba(36,40,48,0.9); border-color: var(--border); }
+
+/* 深色模式切换按钮 */
+.dark-toggle { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-left: 4px; transition: all .2s; }
+.dark-toggle:hover { background: rgba(255,255,255,0.15); }
+
 /* ---- 全局重置 ---- */
 * {
     margin: 0;

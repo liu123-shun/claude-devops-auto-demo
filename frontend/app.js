@@ -24,6 +24,42 @@ function getCurrentUser() {
     return u ? JSON.parse(u) : null;
 }
 
+// ---- 深色模式 ----
+(function() {
+    var saved = localStorage.getItem("darkMode");
+    if (saved === "1") {
+        document.documentElement.setAttribute("data-theme", "dark");
+    }
+})();
+
+function initDarkModeToggle() {
+    var topbars = document.querySelectorAll(".user-info");
+    for (var i = 0; i < topbars.length; i++) {
+        var btn = document.createElement("button");
+        btn.className = "dark-toggle";
+        var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+        btn.textContent = isDark ? "☀️" : "🌙";
+        btn.title = isDark ? "切换亮色模式" : "切换深色模式";
+        btn.addEventListener("click", function() {
+            var current = document.documentElement.getAttribute("data-theme");
+            if (current === "dark") {
+                document.documentElement.removeAttribute("data-theme");
+                localStorage.setItem("darkMode", "0");
+            } else {
+                document.documentElement.setAttribute("data-theme", "dark");
+                localStorage.setItem("darkMode", "1");
+            }
+            var btns = document.querySelectorAll(".dark-toggle");
+            for (var j = 0; j < btns.length; j++) {
+                var d = document.documentElement.getAttribute("data-theme") === "dark";
+                btns[j].textContent = d ? "☀️" : "🌙";
+                btns[j].title = d ? "切换亮色模式" : "切换深色模式";
+            }
+        });
+        topbars[i].appendChild(btn);
+    }
+}
+
 // ---- HTTP 请求封装 ----
 async function apiGet(url) {
     var res = await fetch(API_BASE + url, {
@@ -111,6 +147,7 @@ function displayUserInfo() {
         var el2 = document.getElementById("display-role");
         if (el2) el2.textContent = user.role === "admin" ? "管理员" : "学生";
     }
+    initDarkModeToggle();
 }
 
 // ---- 弹窗工具 ----
