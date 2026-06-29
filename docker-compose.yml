@@ -1,40 +1,10 @@
 # ============================================================
-# 图书借阅管理系统 — Docker 双容器编排
-#   - mysql:    MySQL 8.0（数据持久化）
-#   - backend:  FastAPI 后端（端口 5000）
+# 图书借阅管理系统 — Docker 单容器（后端服务）
+# 依赖本机已安装的 MySQL，不需要拉 MySQL 镜像
 #
-# 启动：docker-compose up -d
-# 停止：docker-compose down
-# 重建：docker-compose up -d --build
+# 启动：docker-compose up -d --build
 # ============================================================
 services:
-
-  # ---- MySQL 8.0 数据库 ----
-  mysql:
-    image: mysql:8.0
-    container_name: library_mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: 123456
-      MYSQL_DATABASE: library_manage
-      MYSQL_CHARSET: utf8mb4
-      MYSQL_COLLATION: utf8mb4_unicode_ci
-    ports:
-      - "3307:3306"   # 映射到3307避免和本机MySQL冲突
-    volumes:
-      - mysql_data:/var/lib/mysql
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-      - --default-authentication-plugin=mysql_native_password
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 40s
-
-  # ---- FastAPI 后端 ----
   backend:
     build:
       context: .
@@ -42,17 +12,13 @@ services:
         PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
     container_name: library_backend
     restart: always
-    depends_on:
-      mysql:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: mysql+pymysql://root:123456@mysql:3306/library_manage?charset=utf8mb4
+      DATABASE_URL: mysql+pymysql://root:123456@host.docker.internal:3306/library_manage?charset=utf8mb4
       SECRET_KEY: library-manage-secret-key-2024-jwt
       PYTHONPATH: /app
     volumes:
       - ./frontend:/app/frontend:ro
-
-volumes:
-  mysql_data:

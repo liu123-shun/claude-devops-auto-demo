@@ -41,7 +41,6 @@ Thumbs.db
 
 # Docker
 Dockerfile
-docker-compose.yml
 .dockerignore
 
 # 前端临时文件
