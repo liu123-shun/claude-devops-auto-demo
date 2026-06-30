@@ -32,6 +32,7 @@ def _migrate_schema(engine):
         "ALTER TABLE book ADD COLUMN publisher VARCHAR(64) NULL COMMENT '出版社'",
         "ALTER TABLE book ADD COLUMN description TEXT NULL COMMENT '图书简介'",
         "ALTER TABLE book ADD COLUMN cover_url VARCHAR(512) NULL COMMENT '封面图片URL'",
+        "ALTER TABLE book MODIFY COLUMN cover_url VARCHAR(4096)",  # 扩容支持长URL
         "ALTER TABLE book ADD COLUMN total_borrows INT NOT NULL DEFAULT 0 COMMENT '累计借阅次数'",
     ]
     # 新表在 create_all 时自动创建，无需手动 migrate

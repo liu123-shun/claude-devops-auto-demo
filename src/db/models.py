@@ -40,7 +40,7 @@ class Book(Base):
     isbn = Column(String(32), nullable=True, comment="ISBN编号")
     publisher = Column(String(64), nullable=True, comment="出版社")
     description = Column(Text, nullable=True, comment="图书简介")
-    cover_url = Column(String(512), nullable=True, comment="封面图片URL")
+    cover_url = Column(String(4096), nullable=True, comment="封面图片URL")
     publish_time = Column(DateTime, nullable=True, comment="出版时间")
     stock = Column(Integer, nullable=False, default=0, comment="库存数量")
     total_borrows = Column(Integer, nullable=False, default=0, comment="累计借阅次数")
