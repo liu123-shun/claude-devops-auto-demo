@@ -506,6 +506,75 @@ def remove_favorite(
     return {"message": "已取消收藏"}
 
 
+# ===== 图书推荐 =====
+
+@router.get("/recommend")
+def recommend_books(
+    current_user: dict = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """个性化图书推荐（规则推荐）：猜你喜欢、高分推荐、同类热门、冷门好书"""
+    user_id = current_user["user_id"]
+    reader_id = _get_student_reader_id(db, user_id)
+
+    from ..db.models import BorrowRecord, BookReview
+
+    # 该学生借过的分类
+    my_cats = set()
+    if reader_id:
+        rows = db.query(Book.category).join(BorrowRecord, BorrowRecord.book_id == Book.id).filter(
+            BorrowRecord.reader_id == reader_id, Book.category.isnot(None), Book.category != ""
+        ).all()
+        my_cats = {r[0] for r in rows}
+
+    def _book_item(b):
+        return {
+            "id": b.id, "book_name": b.book_name, "author": b.author,
+            "category": b.category, "publisher": b.publisher,
+            "description": (b.description or "")[:120], "cover_url": b.cover_url,
+            "stock": b.stock, "total_borrows": b.total_borrows,
+        }
+
+    # 1) 猜你喜欢：学生借过的分类里，借阅量最高的书（排除已借过的）
+    guess_books = []
+    if my_cats:
+        borrowed_ids = set()
+        if reader_id:
+            borrowed_ids = {r[0] for r in db.query(BorrowRecord.book_id).filter(BorrowRecord.reader_id == reader_id).all()}
+        for cat in list(my_cats)[:4]:
+            q = db.query(Book).filter(Book.category == cat, Book.id.notin_(borrowed_ids) if borrowed_ids else True, Book.stock > 0
+            ).order_by(Book.total_borrows.desc()).limit(3).all()
+            for b in q:
+                if b.id not in {x["id"] for x in guess_books}:
+                    guess_books.append(_book_item(b))
+        guess_books = guess_books[:6]
+
+    # 2) 高分推荐：评分 >= 4 且至少有 2 条评价
+    high_rated = db.query(Book, func.avg(BookReview.rating).label("avg_r"), func.count(BookReview.id).label("cnt")
+    ).join(BookReview, BookReview.book_id == Book.id
+    ).group_by(Book.id).having(func.avg(BookReview.rating) >= 4.0, func.count(BookReview.id) >= 1
+    ).order_by(func.avg(BookReview.rating).desc()).limit(6).all()
+    high_books = [_book_item(b) for b, _, _ in high_rated]
+
+    # 3) 同类热门：全站借阅量 Top 10
+    hot = db.query(Book).filter(Book.stock > 0).order_by(Book.total_borrows.desc()).limit(6).all()
+    hot_books = [_book_item(b) for b in hot]
+
+    # 4) 冷门好书：评分高但借阅少（潜力股）
+    hidden = db.query(Book, func.avg(BookReview.rating).label("avg_r")
+    ).join(BookReview, BookReview.book_id == Book.id
+    ).group_by(Book.id).having(func.avg(BookReview.rating) >= 4.0, Book.total_borrows <= 5
+    ).order_by(func.avg(BookReview.rating).desc()).limit(6).all()
+    hidden_books = [_book_item(b) for b, _ in hidden]
+
+    return {
+        "guess": guess_books,
+        "high_rated": high_books,
+        "hot": hot_books,
+        "hidden": hidden_books,
+    }
+
+
 # ===== 分类 =====
 
 @router.get("/categories")

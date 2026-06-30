@@ -214,6 +214,7 @@ function renderSidebar(role) {
         menu = [
             { group: "主菜单", items: [
                 { href: "student_index.html", icon: "&#x1F4CA;", label: "我的首页" },
+                { href: "student_recommend.html", icon: "&#x1F3AF;", label: "图书推荐" },
                 { href: "student_books.html", icon: "&#x1F4DA;", label: "馆藏浏览" },
                 { href: "student_charts.html", icon: "&#x1F4C8;", label: "数据可视化" },
             ]},
