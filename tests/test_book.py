@@ -117,6 +117,6 @@ class TestBookCRUD:
         assert resp.status_code == 200
 
     def test_unauthorized_access(self, client):
-        """无 Token 访问管理接口应返回 403"""
+        """无 Token 访问管理接口应返回 401"""
         resp = client.get("/api/admin/books")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
