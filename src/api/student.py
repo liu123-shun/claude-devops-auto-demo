@@ -519,12 +519,6 @@ def recommend_types():
             "color": "#4a90d9"
         },
         {
-            "key": "personalized", "emoji": "🧠", "label": "个性化推荐",
-            "desc": "基于协同过滤算法，找到与你借阅口味相似的同学，推荐他们借过但你没看过的书",
-            "factors": "协同过滤 · 用户相似度 · 兴趣匹配",
-            "color": "#9b59b6"
-        },
-        {
             "key": "high_rated", "emoji": "⭐", "label": "高分推荐",
             "desc": "全站评分最高的一批图书，经过其他同学验证的好书，值得一读",
             "factors": "评分排序 · 评价数量 · 口碑筛选",
@@ -541,6 +535,12 @@ def recommend_types():
             "desc": "评分很高但借阅人数较少的宝藏图书，质量被低估的好书等你发现",
             "factors": "高评分 · 低曝光 · 借阅量阈值",
             "color": "#27ae60"
+        },
+        {
+            "key": "personalized", "emoji": "🧠", "label": "个性化推荐",
+            "desc": "基于协同过滤算法，找到与你借阅口味相似的同学，推荐他们借过但你没看过的书",
+            "factors": "协同过滤 · 用户相似度 · 兴趣匹配",
+            "color": "#9b59b6"
         },
     ]
 
