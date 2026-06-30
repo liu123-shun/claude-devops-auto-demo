@@ -5,30 +5,33 @@
 <title>图书推荐 — 学生端</title>
 <link rel="stylesheet" href="style.css?v=4">
 <style>
-.rcmd-hero{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%);border-radius:14px;padding:32px 28px;margin-bottom:20px;color:#fff;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
-.rcmd-hero .hero-icon{font-size:52px;flex-shrink:0}
-.rcmd-hero .hero-text{flex:1;min-width:200px}
-.rcmd-hero h2{font-size:24px;font-weight:800;margin-bottom:4px}
-.rcmd-hero p{font-size:13px;opacity:.75;line-height:1.6}
-.section-header{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:16px;font-weight:700;color:#2c3e50}
-.section-header .badge{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:600}
-.badge-guess{background:#e8f0fe;color:#4a90d9}
-.badge-hot{background:#fff3e0;color:#e65100}
-.badge-star{background:#fce4ec;color:#c62828}
-.badge-hidden{background:#e8f5e9;color:#2e7d32}
-.book-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:24px}
-.book-mini{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden;transition:all .2s;cursor:pointer;display:flex;flex-direction:column}
-.book-mini:hover{box-shadow:0 4px 18px rgba(0,0,0,0.12);transform:translateY(-2px)}
-.book-mini .mini-cover{height:110px;background:linear-gradient(135deg,#e3edf7,#c8ddf5);display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;overflow:hidden}
-.book-mini .mini-cover img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
-.book-mini .mini-cover .cover-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:inherit}
-.book-mini .mini-body{padding:10px 12px;flex:1;display:flex;flex-direction:column}
-.book-mini .mini-title{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.book-mini .mini-author{font-size:11px;color:#6b8299;margin-top:2px}
-.book-mini .mini-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:#999}
-.book-mini .mini-stock{font-weight:600}
-.book-mini .mini-borrows{font-size:10px}
-.empty-sec{padding:20px;text-align:center;color:#999;font-size:13px}
+.rcmd-hero{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#16213e);border-radius:14px;padding:28px;margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.rcmd-hero .hero-icon{font-size:44px;flex-shrink:0}
+.rcmd-hero h2{font-size:22px;font-weight:800;margin-bottom:2px}
+.rcmd-hero .hero-sub{font-size:12px;opacity:.7}
+.tab-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab-btn{flex:1;min-width:110px;padding:10px 12px;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:#6b8299;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tab-btn:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.tab-btn.active{background:var(--active-bg,#4a90d9);color:#fff;box-shadow:0 4px 16px var(--active-sh, rgba(74,144,217,.35))}
+.tab-btn .tb-emoji{font-size:22px}
+.tab-btn .tb-label{font-size:12px}
+.tab-btn .tb-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5;margin-top:2px}
+.tab-btn.active .tb-dot{background:#fff;opacity:1}
+.reason-card{background:#f8fafd;border-left:4px solid var(--active-bg,#4a90d9);border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#2c3e50;display:flex;align-items:center;gap:8px}
+.reason-card .rc-icon{font-size:20px;flex-shrink:0}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.book-card-rec{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);overflow:hidden;transition:all .2s;cursor:pointer;display:flex;flex-direction:column}
+.book-card-rec:hover{box-shadow:0 4px 18px rgba(0,0,0,.12);transform:translateY(-2px)}
+.book-card-rec .cover{height:115px;background:linear-gradient(135deg,#e3edf7,#c8ddf5);display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;overflow:hidden}
+.book-card-rec .cover img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.book-card-rec .cover .fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:inherit}
+.book-card-rec .body{padding:10px 12px;flex:1;display:flex;flex-direction:column}
+.book-card-rec .title{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.book-card-rec .author{font-size:11px;color:#6b8299;margin-top:2px}
+.book-card-rec .footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:#999}
+.book-card-rec .stock{font-weight:600}
+.book-card-rec .borrows{font-size:10px}
+.empty-rec{padding:40px;text-align:center;color:#999;font-size:13px}
 </style>
 </head>
 <body>
@@ -38,28 +41,27 @@
   <div class="breadcrumb">🏠 首页 / 图书推荐</div>
 
   <div class="rcmd-hero">
-    <div class="hero-icon">🎯</div>
-    <div class="hero-text">
-      <h2>为你推荐</h2>
-      <p>基于你的借阅历史和全站数据，智能推荐你可能感兴趣的图书。数据越多，推荐越准。</p>
+    <div class="hero-icon" id="hero-emoji">🎯</div>
+    <div style="flex:1;min-width:200px">
+      <h2 id="hero-title">猜你喜欢</h2>
+      <div class="hero-sub" id="hero-desc">基于你的借阅历史智能推荐</div>
     </div>
   </div>
 
-  <!-- 猜你喜欢 -->
-  <div class="section-header"><span class="badge badge-guess">AI 推荐</span> 猜你喜欢</div>
-  <div class="book-row" id="row-guess"></div>
+  <!-- Tab 按钮 -->
+  <div class="tab-bar" id="tab-bar"></div>
 
-  <!-- 高分推荐 -->
-  <div class="section-header"><span class="badge badge-star">高评分</span> ⭐ 高分推荐</div>
-  <div class="book-row" id="row-star"></div>
+  <!-- 推荐理由 -->
+  <div class="reason-card" id="reason-card" style="display:none">
+    <span class="rc-icon" id="reason-icon">📊</span>
+    <div>
+      <div style="font-weight:600;margin-bottom:2px;" id="reason-title">推荐理由</div>
+      <div style="font-size:11px;color:#6b8299;" id="reason-detail"></div>
+    </div>
+  </div>
 
-  <!-- 热门图书 -->
-  <div class="section-header"><span class="badge badge-hot">热门</span> 🔥 全站热门</div>
-  <div class="book-row" id="row-hot"></div>
-
-  <!-- 冷门好书 -->
-  <div class="section-header"><span class="badge badge-hidden">冷门</span> 💎 冷门好书（评分高但借阅少）</div>
-  <div class="book-row" id="row-hidden"></div>
+  <!-- 书本网格 -->
+  <div class="book-grid" id="book-grid"></div>
 </div>
 
 <script src="app.js?v=4"></script>
@@ -68,29 +70,72 @@ var user=checkAuth();
 if(!user||user.role!=="student"){alert("仅学生可访问");window.location.href="login.html";}
 displayUserInfo();renderSidebar("student");
 
-function renderBooks(containerId, books){
-  var el=document.getElementById(containerId);
-  if(!books||!books.length){el.innerHTML='<div class="empty-sec">暂无推荐，多借几本书后推荐会更准哦</div>';return;}
-  el.innerHTML=books.map(function(b){
-    return '<div class="book-mini" onclick="viewDetail('+b.id+')">'
-      +'<div class="mini-cover">'+(b.cover_url?'<img src="'+b.cover_url+'" alt="'+b.book_name+'" onerror="this.style.display=\'none\'" loading="lazy">':'')+'<span class="cover-fallback">📘</span></div>'
-      +'<div class="mini-body"><div class="mini-title" title="'+b.book_name+'">'+b.book_name+'</div>'
-      +'<div class="mini-author">'+b.author+' · '+(b.category||'未知')+'</div>'
-      +'<div class="mini-footer"><span class="mini-stock" style="color:'+(b.stock>0?'#27ae60':'#e74c3c')+';">'+(b.stock>0?'可借 '+b.stock:'已借完')+'</span>'
-      +'<span class="mini-borrows">借阅 '+b.total_borrows+' 次</span></div></div></div>';
+var allTypes=[], currentType="guess";
+
+async function init(){
+  var types=await apiGet("/api/student/recommend/types");
+  if(!types)return;
+  allTypes=types;
+
+  // Render tabs
+  var tabHtml="";
+  types.forEach(function(t){
+    tabHtml+='<button class="tab-btn" data-type="'+t.key+'" style="--active-bg:'+t.color+';--active-sh:'+t.color+'33;" onclick="switchTab(\''+t.key+'\')">'
+      +'<span class="tb-emoji">'+t.emoji+'</span><span class="tb-label">'+t.label+'</span><span class="tb-dot"></span></button>';
+  });
+  document.getElementById("tab-bar").innerHTML=tabHtml;
+
+  // Load first type
+  switchTab("guess");
+}
+
+function switchTab(type){
+  currentType=type;
+  document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.toggle("active",b.dataset.type===type);});
+
+  // Update hero
+  var t=allTypes.find(function(t){return t.key===type;});
+  if(t){
+    document.getElementById("hero-emoji").textContent=t.emoji;
+    document.getElementById("hero-title").textContent=t.label;
+    document.getElementById("hero-desc").textContent=t.desc;
+    document.getElementById("reason-card").style.display="";
+    document.getElementById("reason-card").style.borderLeftColor=t.color;
+    document.getElementById("reason-icon").textContent="📊";
+    document.getElementById("reason-title").textContent="推荐因子";
+    document.getElementById("reason-detail").textContent=t.factors;
+  }
+
+  loadBooks(type);
+}
+
+async function loadBooks(type){
+  var grid=document.getElementById("book-grid");
+  grid.innerHTML='<div class="empty-rec">正在加载推荐...</div>';
+
+  var d=await apiGet("/api/student/recommend?type="+type);
+  if(!d||!d.items){grid.innerHTML='<div class="empty-rec">暂无推荐</div>';return;}
+
+  // Update reason
+  if(d.reason){
+    document.getElementById("reason-title").textContent="推荐逻辑";
+    document.getElementById("reason-detail").textContent=d.reason;
+  }
+
+  if(!d.items.length){grid.innerHTML='<div class="empty-rec">暂无推荐，多借几本书后推荐会更准</div>';return;}
+
+  grid.innerHTML=d.items.map(function(b){
+    return '<div class="book-card-rec" onclick="viewDetail('+b.id+')">'
+      +'<div class="cover">'+(b.cover_url?'<img src="'+b.cover_url+'" alt="'+b.book_name+'" onerror="this.style.display=\'none\'" loading="lazy">':'')+'<span class="fb">📘</span></div>'
+      +'<div class="body"><div class="title" title="'+b.book_name+'">'+b.book_name+'</div>'
+      +'<div class="author">'+b.author+' · '+(b.category||'?')+'</div>'
+      +'<div class="footer"><span class="stock" style="color:'+(b.stock>0?'#27ae60':'#e74c3c')+';">'+(b.stock>0?'可借'+b.stock:'已借完')+'</span>'
+      +'<span class="borrows">借阅'+b.total_borrows+'次</span></div></div></div>';
   }).join("");
 }
 
 function viewDetail(id){window.location.href="student_books.html#book-"+id;}
 
-async function init(){
-  var d=await apiGet("/api/student/recommend");
-  if(!d)return;
-  renderBooks("row-guess",d.guess);
-  renderBooks("row-star",d.high_rated);
-  renderBooks("row-hot",d.hot);
-  renderBooks("row-hidden",d.hidden);
-}
 init();
 </script>
 </body>

@@ -508,71 +508,161 @@ def remove_favorite(
 
 # ===== 图书推荐 =====
 
+@router.get("/recommend/types")
+def recommend_types():
+    """返回所有推荐类型及其说明（供前端Tab展示）"""
+    return [
+        {
+            "key": "guess", "emoji": "🤖", "label": "猜你喜欢",
+            "desc": "基于你的借阅历史，分析你常看的图书分类，在同分类中推荐借阅量最高的图书",
+            "factors": "阅读偏好 · 分类匹配 · 热门度排序",
+            "color": "#4a90d9"
+        },
+        {
+            "key": "personalized", "emoji": "🧠", "label": "个性化推荐",
+            "desc": "基于协同过滤算法，找到与你借阅口味相似的同学，推荐他们借过但你没看过的书",
+            "factors": "协同过滤 · 用户相似度 · 兴趣匹配",
+            "color": "#9b59b6"
+        },
+        {
+            "key": "high_rated", "emoji": "⭐", "label": "高分推荐",
+            "desc": "全站评分最高的一批图书，经过其他同学验证的好书，值得一读",
+            "factors": "评分排序 · 评价数量 · 口碑筛选",
+            "color": "#e74c3c"
+        },
+        {
+            "key": "hot", "emoji": "🔥", "label": "全站热门",
+            "desc": "当前借阅次数最多的图书，反映全校同学的阅读潮流和趋势",
+            "factors": "借阅次数 · 受欢迎度 · 热度排名",
+            "color": "#f39c12"
+        },
+        {
+            "key": "hidden", "emoji": "💎", "label": "冷门好书",
+            "desc": "评分很高但借阅人数较少的宝藏图书，质量被低估的好书等你发现",
+            "factors": "高评分 · 低曝光 · 借阅量阈值",
+            "color": "#27ae60"
+        },
+    ]
+
+
 @router.get("/recommend")
 def recommend_books(
+    type: str = Query("guess", description="推荐类型: guess/personalized/high_rated/hot/hidden"),
     current_user: dict = Depends(require_student),
     db: Session = Depends(get_db),
 ):
-    """个性化图书推荐（规则推荐）：猜你喜欢、高分推荐、同类热门、冷门好书"""
+    """按类型返回推荐图书，每种类型有独立的推荐因子说明"""
     user_id = current_user["user_id"]
     reader_id = _get_student_reader_id(db, user_id)
 
     from ..db.models import BorrowRecord, BookReview
 
-    # 该学生借过的分类
+    def _book_item(b):
+        return {
+            "id": b.id, "book_name": b.book_name, "author": b.author,
+            "category": b.category, "publisher": b.publisher,
+            "description": (b.description or "")[:150], "cover_url": b.cover_url,
+            "stock": b.stock, "total_borrows": b.total_borrows,
+        }
+
+    # 该学生借过的书ID和分类
     my_cats = set()
+    borrowed_ids = set()
     if reader_id:
         rows = db.query(Book.category).join(BorrowRecord, BorrowRecord.book_id == Book.id).filter(
             BorrowRecord.reader_id == reader_id, Book.category.isnot(None), Book.category != ""
         ).all()
         my_cats = {r[0] for r in rows}
+        borrowed_ids = {r[0] for r in db.query(BorrowRecord.book_id).filter(BorrowRecord.reader_id == reader_id).all()}
 
-    def _book_item(b):
-        return {
-            "id": b.id, "book_name": b.book_name, "author": b.author,
-            "category": b.category, "publisher": b.publisher,
-            "description": (b.description or "")[:120], "cover_url": b.cover_url,
-            "stock": b.stock, "total_borrows": b.total_borrows,
-        }
+    result = []
+    reason = ""
 
-    # 1) 猜你喜欢：学生借过的分类里，借阅量最高的书（排除已借过的）
-    guess_books = []
-    if my_cats:
-        borrowed_ids = set()
-        if reader_id:
-            borrowed_ids = {r[0] for r in db.query(BorrowRecord.book_id).filter(BorrowRecord.reader_id == reader_id).all()}
-        for cat in list(my_cats)[:4]:
-            q = db.query(Book).filter(Book.category == cat, Book.id.notin_(borrowed_ids) if borrowed_ids else True, Book.stock > 0
-            ).order_by(Book.total_borrows.desc()).limit(3).all()
-            for b in q:
-                if b.id not in {x["id"] for x in guess_books}:
-                    guess_books.append(_book_item(b))
-        guess_books = guess_books[:6]
+    if type == "guess":
+        # 猜你喜欢：同分类热门
+        reason = "基于你的借阅偏好分类推荐"
+        seen = set()
+        if my_cats:
+            for cat in list(my_cats)[:4]:
+                q = db.query(Book).filter(
+                    Book.category == cat,
+                    ~Book.id.in_(borrowed_ids) if borrowed_ids else True,
+                    Book.stock > 0
+                ).order_by(Book.total_borrows.desc()).limit(3).all()
+                for b in q:
+                    if b.id not in seen:
+                        seen.add(b.id)
+                        result.append(_book_item(b))
+        result = result[:12]
 
-    # 2) 高分推荐：评分 >= 4 且至少有 2 条评价
-    high_rated = db.query(Book, func.avg(BookReview.rating).label("avg_r"), func.count(BookReview.id).label("cnt")
-    ).join(BookReview, BookReview.book_id == Book.id
-    ).group_by(Book.id).having(func.avg(BookReview.rating) >= 4.0, func.count(BookReview.id) >= 1
-    ).order_by(func.avg(BookReview.rating).desc()).limit(6).all()
-    high_books = [_book_item(b) for b, _, _ in high_rated]
+    elif type == "personalized":
+        # 协同过滤个性化推荐
+        reason = "基于协同过滤算法的个性化推荐"
+        if reader_id and borrowed_ids:
+            # Step 1: 找到和当前用户借过相同书的其他读者
+            similar_readers = db.query(BorrowRecord.reader_id).filter(
+                BorrowRecord.book_id.in_(borrowed_ids),
+                BorrowRecord.reader_id != reader_id
+            ).distinct().all()
+            similar_ids = [r[0] for r in similar_readers]
 
-    # 3) 同类热门：全站借阅量 Top 10
-    hot = db.query(Book).filter(Book.stock > 0).order_by(Book.total_borrows.desc()).limit(6).all()
-    hot_books = [_book_item(b) for b in hot]
+            if similar_ids:
+                # Step 2: 这些相似读者借过的其他书（当前用户没借过的）
+                cf_books = db.query(
+                    BorrowRecord.book_id, func.count(BorrowRecord.id).label("cnt")
+                ).filter(
+                    BorrowRecord.reader_id.in_(similar_ids),
+                    ~BorrowRecord.book_id.in_(borrowed_ids)
+                ).group_by(BorrowRecord.book_id).order_by(func.count(BorrowRecord.id).desc()).limit(15).all()
 
-    # 4) 冷门好书：评分高但借阅少（潜力股）
-    hidden = db.query(Book, func.avg(BookReview.rating).label("avg_r")
-    ).join(BookReview, BookReview.book_id == Book.id
-    ).group_by(Book.id).having(func.avg(BookReview.rating) >= 4.0, Book.total_borrows <= 5
-    ).order_by(func.avg(BookReview.rating).desc()).limit(6).all()
-    hidden_books = [_book_item(b) for b, _ in hidden]
+                for bid, cnt in cf_books:
+                    b = book_dao.get_book_by_id(db, bid)
+                    if b and b.stock > 0:
+                        item = _book_item(b)
+                        item["cf_count"] = cnt
+                        result.append(item)
+                    if len(result) >= 12:
+                        break
+            # Step 3: 如果协同过滤结果不足，用分类推荐补充
+            if len(result) < 6 and my_cats:
+                seen = {bk["id"] for bk in result}
+                for cat in list(my_cats)[:3]:
+                    q = db.query(Book).filter(
+                        Book.category == cat, Book.stock > 0,
+                        ~Book.id.in_(borrowed_ids) if borrowed_ids else True
+                    ).order_by(Book.total_borrows.desc()).limit(4).all()
+                    for b in q:
+                        if b.id not in seen:
+                            seen.add(b.id)
+                            result.append(_book_item(b))
+        # 如果还是没有（新用户），退化为热门推荐
+        if len(result) < 3:
+            hot = db.query(Book).filter(Book.stock > 0).order_by(Book.total_borrows.desc()).limit(8).all()
+            result = [_book_item(b) for b in hot]
+        reason = "基于协同过滤算法：先找到与你口味相似的同学，再推荐他们借过的书"
 
-    return {
-        "guess": guess_books,
-        "high_rated": high_books,
-        "hot": hot_books,
-        "hidden": hidden_books,
-    }
+    elif type == "high_rated":
+        reason = "按全站评分排序，筛选出高口碑图书"
+        rows = db.query(Book, func.avg(BookReview.rating).label("avgr"), func.count(BookReview.id).label("cnt")
+        ).join(BookReview, BookReview.book_id == Book.id
+        ).group_by(Book.id).having(func.avg(BookReview.rating) >= 4.0, func.count(BookReview.id) >= 1
+        ).order_by(func.avg(BookReview.rating).desc()).limit(12).all()
+        result = [_book_item(b) for b, _, _ in rows]
+
+    elif type == "hot":
+        reason = "按全站借阅次数排名"
+        hot = db.query(Book).filter(Book.stock > 0).order_by(Book.total_borrows.desc()).limit(12).all()
+        result = [_book_item(b) for b in hot]
+
+    elif type == "hidden":
+        reason = "评分≥4星但借阅量稀少（<5次）的宝藏书"
+        rows = db.query(Book, func.avg(BookReview.rating).label("avgr")
+        ).join(BookReview, BookReview.book_id == Book.id
+        ).group_by(Book.id).having(func.avg(BookReview.rating) >= 4.0, Book.total_borrows <= 5
+        ).order_by(func.avg(BookReview.rating).desc()).limit(12).all()
+        result = [_book_item(b) for b, _ in rows]
+
+    return {"items": result, "total": len(result), "type": type, "reason": reason}
 
 
 # ===== 分类 =====
