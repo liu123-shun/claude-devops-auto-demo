@@ -1,5 +1,5 @@
 # ============================================================
-# CD — 持续交付（仅 master 分支 push）
+# CD — 持续部署 (push to master 时自动触发)
 # Docker 构建 + 推送至 GitHub Packages + Docker Hub
 # ============================================================
 name: CD
@@ -114,21 +114,3 @@ jobs:
           docker push ${IMAGE_ID}:latest
           docker push ${IMAGE_ID}:${COMMIT_SHORT}
           echo "GitHub Packages: ${IMAGE_ID}:latest"
-
-      # ---- 推送到 Docker Hub（可选，配置 Secrets 后才生效） ----
-      - name: Login to Docker Hub
-        if: ${{ secrets.DOCKER_USERNAME != '' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Push to Docker Hub
-        if: ${{ secrets.DOCKER_USERNAME != '' }}
-        run: |
-          COMMIT_SHORT=$(git rev-parse --short HEAD)
-          docker tag ${{ env.DOCKER_IMAGE_NAME }}:latest ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
-          docker tag ${{ env.DOCKER_IMAGE_NAME }}:latest ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${COMMIT_SHORT}
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${COMMIT_SHORT}
-          echo "Docker Hub: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest"
