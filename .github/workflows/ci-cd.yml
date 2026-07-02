@@ -114,22 +114,43 @@ jobs:
           docker run --rm ${{ env.DOCKER_IMAGE_NAME }}:latest \
             python -c "from src.main import app; print('✅ 模块导入成功')"
 
-      # 2.4 登录 Docker Hub（使用 GitHub Secrets）
+      # 2.4 登录 GitHub Container Registry（自动，无需额外配置）
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2.5 推送镜像到 GitHub Packages
+      - name: Push to GitHub Packages
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}
+          # 转换为小写（ghcr.io 要求）
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          docker tag ${{ env.DOCKER_IMAGE_NAME }}:latest ${IMAGE_ID}:latest
+          docker tag ${{ env.DOCKER_IMAGE_NAME }}:latest ${IMAGE_ID}:${COMMIT_SHORT}
+          docker push ${IMAGE_ID}:latest
+          docker push ${IMAGE_ID}:${COMMIT_SHORT}
+          echo "✅ 已推送至: ${IMAGE_ID}:latest"
+
+      # 2.6 登录 Docker Hub（可选，需配置 Secrets）
       - name: Login to Docker Hub
+        if: ${{ secrets.DOCKER_USERNAME != '' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # 2.5 推送镜像到 Docker Hub
-      - name: Push Docker Image
+      # 2.7 推送镜像到 Docker Hub（可选）
+      - name: Push to Docker Hub
+        if: ${{ secrets.DOCKER_USERNAME != '' }}
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           COMMIT_SHORT=$(git rev-parse --short HEAD)
-          # Tag 镜像
           docker tag ${{ env.DOCKER_IMAGE_NAME }}:latest ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           docker tag ${{ env.DOCKER_IMAGE_NAME }}:latest ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${COMMIT_SHORT}
-          # Push
           docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${COMMIT_SHORT}
           echo "✅ 镜像推送完成: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest"

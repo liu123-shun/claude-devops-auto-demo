@@ -1,0 +1,47 @@
+# ============================================================
+# GitHub CodeQL 安全分析
+# 自动扫描 Python 代码中的安全漏洞和编码问题
+# ============================================================
+name: "CodeQL"
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '0 8 * * 1'  # 每周一早8点自动扫描
+
+jobs:
+  analyze:
+    name: Analyze (Python)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 初始化 CodeQL
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # 自动构建（Python 不需要额外构建步骤）
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # 执行分析
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
